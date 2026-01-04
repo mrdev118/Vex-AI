@@ -1,0 +1,50 @@
+[
+  {
+    "key": "fr",
+    "value": "0dYIoGIm2TrnLxcC9..BpWhz5..AAA.0.0.BpWh1k.AWeoUvuDCXm9rH3IhybxGL3a4d4",
+    "domain": "facebook.com",
+    "path": "/",
+    "hostOnly": false,
+    "creation": "2026-01-04T07:57:24.535Z",
+    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "secure": true,
+    "httpOnly": true,
+    "expires": "2026-04-04T07:57:24.000Z"
+  },
+  {
+    "key": "sb",
+    "value": "-Rxaabm08wjAVtcCdi1Zwkov",
+    "domain": "facebook.com",
+    "path": "/",
+    "hostOnly": false,
+    "creation": "2026-01-04T07:57:24.543Z",
+    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "secure": true,
+    "httpOnly": true,
+    "expires": "2027-02-08T07:55:37.000Z"
+  },
+  {
+    "key": "fr",
+    "value": "0dYIoGIm2TrnLxcC9..BpWhz5..AAA.0.0.BpWhz5.AWdcORfTDVD-0gjDZkbBz2kGulI",
+    "domain": "messenger.com",
+    "path": "/",
+    "hostOnly": false,
+    "creation": "2026-01-04T07:57:24.543Z",
+    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "secure": true,
+    "httpOnly": true,
+    "expires": "2026-04-04T07:55:37.000Z"
+  },
+  {
+    "key": "sb",
+    "value": "-Rxaabm08wjAVtcCdi1Zwkov",
+    "domain": "messenger.com",
+    "path": "/",
+    "hostOnly": false,
+    "creation": "2026-01-04T07:57:24.544Z",
+    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "secure": true,
+    "httpOnly": true,
+    "expires": "2027-02-08T07:55:37.000Z"
+  }
+]

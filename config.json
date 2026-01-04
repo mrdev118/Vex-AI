@@ -1,0 +1,29 @@
+{
+  "bot": {
+    "prefix": "!",
+    "name": "VexonSMP"
+  },
+  "paths": {
+    "appstate": "./appstate.json",
+    "commands": "./commands"
+  },
+  "api": {
+    "forceLogin": true,
+    "listenEvents": true,
+    "logLevel": "error",
+    "selfListen": false
+  },
+  "externalApi": {
+    "url": "https://minhdong.site",
+    "key": "YOUR_API_KEY_HERE"
+  },
+  "logger": {
+    "level": "info",
+    "enableColors": true,
+    "enableTimestamp": true
+  },
+  "permissions": {
+    "owner": "100072870249233",
+    "admins": []
+  }
+}
