@@ -7,20 +7,20 @@ const command: ICommand = {
     name: "unload",
     version: "1.0.0",
     author: "Donix",
-    description: "Gỡ bỏ lệnh khỏi memory",
+    description: "Unload command from memory",
     category: "System",
-    usages: "!unload <tên lệnh>",
+    usages: "!unload <command name>",
     aliases: ["remove"],
-    role: 2 // Admin bot
+    role: 2 // Bot Admin
   },
 
   run: async ({ api, event, args, send }: IRunParams) => {
 
     if (args.length === 0) {
       await send(
-        "Vui lòng nhập tên lệnh cần gỡ bỏ!\n" +
-        "• !unload <tên lệnh> - Gỡ bỏ 1 lệnh\n" +
-        "Ví dụ: !unload ping"
+        "Please enter the command name to unload!\n" +
+        "• !unload <command name> - Unload 1 command\n" +
+        "Example: !unload ping"
       );
       return;
     }

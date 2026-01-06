@@ -22,7 +22,7 @@ export const handleEvent = async (
           Threads
         });
       } catch (error) {
-        logger.error(`Lỗi handleEvent trong command ${command.config.name}:`, error);
+        logger.error(`Error handleEvent in command ${command.config.name}:`, error);
       }
     }
   }

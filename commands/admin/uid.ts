@@ -4,12 +4,12 @@ const command: ICommand = {
     config: {
         name: "uid",
         hasPrefix: true,
-        description: "Lấy UID người dùng",
+        description: "Get user UID",
         category: "Admin"
     },
 
     run: async ({ api, event }: IRunParams) => {
-        api.sendMessage(`UID của bạn: ${event.senderID}`, event.threadID);
+        api.sendMessage(`Your UID: ${event.senderID}`, event.threadID);
     }
 };
 

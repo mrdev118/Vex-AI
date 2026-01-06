@@ -5,21 +5,21 @@ const command: ICommand = {
         name: "weather",
         version: "1.0.0",
         author: "Donix",
-        description: "Xem thời tiết (mẫu)",
+        description: "View weather (mock)",
         category: "Fun",
-        usages: "!weather <thành phố>"
+        usages: "!weather <city>"
     },
 
     run: async ({ api, event, args }: IRunParams) => {
-        const city = args.join(' ') || "Hà Nội";
+        const city = args.join(' ') || "Hanoi";
 
         const weather = {
             city: city,
             temp: Math.floor(Math.random() * 15) + 20,
-            condition: ["☀️ Nắng", "☁️ Nhiều mây", "🌧️ Mưa", "⛅ Ít mây"][Math.floor(Math.random() * 4)]
+            condition: ["☀️ Sunny", "☁️ Cloudy", "🌧️ Rainy", "⛅ Partly Cloudy"][Math.floor(Math.random() * 4)]
         };
 
-        const message = `🌤️ Thời tiết ${weather.city}:\n🌡️ Nhiệt độ: ${weather.temp}°C\n${weather.condition}`;
+        const message = `🌤️ Weather ${weather.city}:\n🌡️ Temperature: ${weather.temp}°C\n${weather.condition}`;
         api.sendMessage(message, event.threadID);
     }
 };

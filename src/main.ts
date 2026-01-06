@@ -47,7 +47,7 @@ const main = async (): Promise<void> => {
     startBot();
   } catch (error) {
     console.error('ERROR:', error);
-    logger.error('Lỗi khởi động bot:', error);
+    logger.error('Bot startup error:', error);
     if (error instanceof Error) {
       console.error('Stack:', error.stack);
       logger.error('Stack trace:', error.stack);

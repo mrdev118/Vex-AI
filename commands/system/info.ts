@@ -7,7 +7,7 @@ const command: ICommand = {
     name: "info",
     version: "1.0.0",
     author: "Donix",
-    description: "Xem thông tin đã lưu trong DB",
+    description: "View info saved in DB",
     category: "System"
   },
 
@@ -19,29 +19,29 @@ const command: ICommand = {
 
       let msg = `=== 👤 USER INFO ===\n`;
       if (user) {
-        msg += `Tên: ${user.name}\n`;
-        msg += `Giới tính: ${user.gender}\n`;
-        msg += `Tiền: ${user.money}$\n`;
+        msg += `Name: ${user.name}\n`;
+        msg += `Gender: ${user.gender}\n`;
+        msg += `Money: ${user.money}$\n`;
         msg += `EXP: ${user.exp}\n`;
       } else {
-        msg += `❌ Không tìm thấy thông tin user\n`;
+        msg += `❌ User info not found\n`;
       }
 
       if (isGroup) {
         const thread = await Thread.findByPk(threadID);
         msg += `\n=== 🏠 GROUP INFO ===\n`;
         if (thread) {
-          msg += `Tên nhóm: ${thread.name}\n`;
+          msg += `Group Name: ${thread.name}\n`;
           msg += `Prefix: ${thread.prefix}\n`;
-          msg += `Rankup: ${thread.rankup ? 'Bật' : 'Tắt'}\n`;
+          msg += `Rankup: ${thread.rankup ? 'On' : 'Off'}\n`;
         } else {
-          msg += `❌ Không tìm thấy thông tin nhóm\n`;
+          msg += `❌ Group info not found\n`;
         }
       }
 
       api.sendMessage(msg, threadID);
     } catch (error) {
-      api.sendMessage("❌ Có lỗi xảy ra khi lấy thông tin!", threadID);
+      api.sendMessage("❌ An error occurred while fetching info!", threadID);
     }
   }
 };

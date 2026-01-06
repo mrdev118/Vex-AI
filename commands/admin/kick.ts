@@ -5,21 +5,21 @@ const command: ICommand = {
         name: "kick",
         version: "1.0.0",
         author: "Donix",
-        description: "Kick người dùng khỏi nhóm",
+        description: "Kick user from group",
         category: "Admin",
-        usages: "!kick @user hoặc !kick <userID>",
-        role: 1 // Admin nhóm
+        usages: "!kick @user or !kick <userID>",
+        role: 1 // Group Admin
     },
 
     run: async ({ api, event, args, send }: IRunParams) => {
 
         if (!event.isGroup) {
-            await send("Lệnh này chỉ dùng trong nhóm!");
+            await send("This command can only be used in groups!");
             return;
         }
 
         if (args.length === 0) {
-            await send("Vui lòng tag người cần kick hoặc nhập userID!");
+            await send("Please tag the user to kick or enter userID!");
             return;
         }
 
@@ -33,13 +33,13 @@ const command: ICommand = {
         try {
             api.removeUserFromGroup(targetID, event.threadID, async (err?: Error) => {
                 if (err) {
-                    await send(`❌ Lỗi khi kick: ${err.message}`);
+                    await send(`❌ Error kicking: ${err.message}`);
                 } else {
-                    await send(`👢 Đã kick người dùng ${targetID} khỏi nhóm!`);
+                    await send(`👢 Kicked user ${targetID} from the group!`);
                 }
             });
         } catch (error) {
-            await send("❌ Có lỗi xảy ra khi kick người dùng!");
+            await send("❌ An error occurred while kicking user!");
         }
     }
 };

@@ -27,7 +27,7 @@ export const handleChat = async (
           react: messageHelper.react
         });
       } catch (error) {
-        logger.error(`Lỗi handleChat trong command ${command.config.name}:`, error);
+        logger.error(`Error handleChat in command ${command.config.name}:`, error);
       }
     }
   }

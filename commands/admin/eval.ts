@@ -8,7 +8,7 @@ const command: ICommand = {
     name: "eval",
     version: "1.0.0",
     author: "Donix",
-    description: "Chạy code JavaScript/TypeScript (chỉ owner)",
+    description: "Run JavaScript/TypeScript code (owner only)",
     category: "Admin",
     usages: "!eval <code>",
     aliases: ["exec", "run"],
@@ -65,7 +65,7 @@ const command: ICommand = {
     try {
       const code = args.join(' ');
       if (!code) {
-        await send('⚠️ Vui lòng nhập đoạn code để thực thi.');
+        await send('⚠️ Please enter code to execute.');
         return;
       }
 
@@ -140,17 +140,17 @@ const command: ICommand = {
             params: {
               client: 'gtx',
               sl: 'auto',
-              tl: 'vi',
+              tl: 'en',
               dt: 't',
               q: e.message,
             },
           }
         );
-        const translatedText = translated.data?.[0]?.[0]?.[0] ?? 'Không rõ lỗi.';
-        await send(`⚠️ Lỗi: ${e.message}\n📝 Dịch: ${translatedText}`);
+        const translatedText = translated.data?.[0]?.[0]?.[0] ?? 'Unknown error.';
+        await send(`⚠️ Error: ${e.message}\n📝 Translation: ${translatedText}`);
       } catch (err: any) {
         console.error(err);
-        await send(`⚠️ Lỗi: ${e.message}\n📝 Không thể dịch lỗi.`);
+        await send(`⚠️ Error: ${e.message}\n📝 Cannot translate error.`);
       }
       logger.error('Eval error:', e);
     }

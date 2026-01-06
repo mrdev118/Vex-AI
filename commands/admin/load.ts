@@ -8,21 +8,21 @@ const command: ICommand = {
     name: "load",
     version: "1.0.0",
     author: "Donix",
-    description: "Tải lại lệnh (theo tên hoặc all)",
+    description: "Reload command (by name or all)",
     category: "System",
-    usages: "!load <tên lệnh> hoặc !load all",
-    role: 2 // Admin bot
+    usages: "!load <command name> or !load all",
+    role: 2 // Bot Admin
   },
 
   run: async ({ api, event, args, send }: IRunParams) => {
 
     if (args.length === 0) {
       await send(
-        "Vui lòng nhập tên lệnh cần tải lại!\n" +
-        "• !load <tên lệnh> - Tải lại 1 lệnh\n" +
-        "• !load <tên1> <tên2> ... - Tải lại nhiều lệnh\n" +
-        "• !load all - Tải lại tất cả lệnh\n" +
-        "Ví dụ: !load ping hoặc !load ping help hoặc !load all"
+        "Please enter the command name to reload!\n" +
+        "• !load <command name> - Reload 1 command\n" +
+        "• !load <name1> <name2> ... - Reload multiple commands\n" +
+        "• !load all - Reload all commands\n" +
+        "Example: !load ping or !load ping help or !load all"
       );
       return;
     }
@@ -33,7 +33,7 @@ const command: ICommand = {
       client.commands.clear();
       client.noprefix.clear();
       loadCommands();
-      await send("✅ Đã tải lại tất cả lệnh");
+      await send("✅ Reloaded all commands");
     } else if (args.length === 1) {
       const result = loadSingleCommand(target);
       await send(result.message);

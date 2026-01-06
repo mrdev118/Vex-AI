@@ -31,7 +31,7 @@ class Logger {
 
   private formatMessage(level: LogLevel, message: string, ...args: unknown[]): string {
     const timestamp = this.config.enableTimestamp
-      ? `[${new Date().toLocaleTimeString('vi-VN')}]`
+      ? `[${new Date().toLocaleTimeString('en-US')}]`
       : '';
 
     const colors: Record<LogLevel, string> = {

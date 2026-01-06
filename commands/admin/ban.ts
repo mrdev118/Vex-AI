@@ -5,21 +5,21 @@ const command: ICommand = {
         name: "ban",
         version: "1.0.0",
         author: "Donix",
-        description: "Ban người dùng khỏi nhóm",
+        description: "Ban user from group",
         category: "Admin",
-        usages: "!ban @user hoặc !ban <userID>",
-        role: 1 // Admin nhóm
+        usages: "!ban @user or !ban <userID>",
+        role: 1 // Group Admin
     },
 
     run: async ({ api, event, args, send }: IRunParams) => {
 
         if (!event.isGroup) {
-            await send("Lệnh này chỉ dùng trong nhóm!");
+            await send("This command can only be used in groups!");
             return;
         }
 
         if (args.length === 0) {
-            await send("Vui lòng tag người cần ban hoặc nhập userID!");
+            await send("Please tag the user to ban or enter userID!");
             return;
         }
 
@@ -33,13 +33,13 @@ const command: ICommand = {
         try {
             api.removeUserFromGroup(targetID, event.threadID, async (err?: Error) => {
                 if (err) {
-                    await send(`❌ Lỗi khi ban: ${err.message}`);
+                    await send(`❌ Error banning: ${err.message}`);
                 } else {
-                    await send(`✅ Đã ban người dùng ${targetID} khỏi nhóm!`);
+                    await send(`✅ Banned user ${targetID} from the group!`);
                 }
             });
         } catch (error) {
-            await send("❌ Có lỗi xảy ra khi ban người dùng!");
+            await send("❌ An error occurred while banning user!");
         }
     }
 };

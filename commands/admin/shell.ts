@@ -10,7 +10,7 @@ const command: ICommand = {
     name: "shell",
     version: "1.0.0",
     author: "Donix",
-    description: "Chạy lệnh shell/terminal (chỉ owner)",
+    description: "Run shell/terminal command (owner only)",
     category: "Admin",
     usages: "!shell <command>",
     aliases: ["sh", "cmd", "terminal"],
@@ -23,7 +23,7 @@ const command: ICommand = {
     try {
       const commandStr = args.join(' ');
       if (!commandStr) {
-        await send('⚠️ Vui lòng nhập lệnh shell để thực thi.\n📝 Ví dụ: !shell dir hoặc !shell ls -la');
+        await send('⚠️ Please enter shell command to execute.\n📝 Example: !shell dir or !shell ls -la');
         return;
       }
 
@@ -48,13 +48,13 @@ const command: ICommand = {
       }
 
       if (!output.trim()) {
-        await send('✅ Lệnh đã được thực thi thành công (không có output).');
+        await send('✅ Command executed successfully (no output).');
         return;
       }
 
       if (output.length > 2000) {
         const truncated = output.substring(0, 1950);
-        await send(`${truncated}\n\n... (đã cắt bớt, tổng cộng ${output.length} ký tự)`);
+        await send(`${truncated}\n\n... (truncated, total ${output.length} characters)`);
       } else {
         await send(output.trim());
       }
@@ -65,18 +65,18 @@ const command: ICommand = {
       let errorMessage = '';
 
       if (e.code === 'ENOENT') {
-        errorMessage = `❌ Lỗi: Không tìm thấy lệnh "${args[0]}"\n📝 Lệnh này không tồn tại hoặc không có trong PATH.`;
+        errorMessage = `❌ Error: Command not found "${args[0]}"\n📝 Command does not exist or is not in PATH.`;
       } else if (e.code === 'ETIMEDOUT' || e.message?.includes('timeout')) {
-        errorMessage = `⏱️ Lỗi: Lệnh đã vượt quá thời gian chờ (60 giây).`;
+        errorMessage = `⏱️ Error: Command timed out (60 seconds).`;
       } else if (e.stderr) {
         errorMessage = `❌ STDERR:\n${e.stderr}`;
       } else {
-        errorMessage = `❌ Lỗi: ${e.message || 'Không rõ lỗi.'}`;
+        errorMessage = `❌ Error: ${e.message || 'Unknown error.'}`;
       }
 
       if (errorMessage.length > 2000) {
         const truncated = errorMessage.substring(0, 1950);
-        await send(`${truncated}\n\n... (đã cắt bớt)`);
+        await send(`${truncated}\n\n... (truncated)`);
       } else {
         await send(errorMessage);
       }

@@ -4,15 +4,15 @@ const command: ICommand = {
     config: {
         name: "bot",
         hasPrefix: false,
-        description: "Gọi bot thì bot thưa",
+        description: "Call bot and it replies",
         category: "Fun"
     },
 
     run: async ({ api, event }: IRunParams) => {
         const body = event.body.toLowerCase();
 
-        if (body.includes("bot ơi") || body === "bot" || body.includes("bot à")) {
-            api.sendMessage("Dạ, em đây? Gọi gì em 2026 rồi vẫn chưa ngủ à? 😊", event.threadID);
+        if (body.includes("bot") || body === "bot" || body.includes("hello bot")) {
+            api.sendMessage("Yes, I'm here? What do you need? It's 2026 and you're still not sleeping? 😊", event.threadID);
         }
     }
 };

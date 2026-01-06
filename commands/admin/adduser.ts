@@ -5,21 +5,21 @@ const command: ICommand = {
         name: "adduser",
         version: "1.0.0",
         author: "Donix",
-        description: "Thêm người dùng vào nhóm",
+        description: "Add user to group",
         category: "Admin",
         usages: "!adduser <userID>",
-        role: 1 // Admin nhóm
+        role: 1 // Group Admin
     },
 
     run: async ({ api, event, args, send }: IRunParams) => {
 
         if (!event.isGroup) {
-            await send("Lệnh này chỉ dùng trong nhóm!");
+            await send("This command can only be used in groups!");
             return;
         }
 
         if (args.length === 0) {
-            await send("Vui lòng nhập userID cần thêm!");
+            await send("Please enter userID to add!");
             return;
         }
 
@@ -28,13 +28,13 @@ const command: ICommand = {
         try {
             api.addUserToGroup(userID, event.threadID, async (err?: Error) => {
                 if (err) {
-                    await send(`❌ Lỗi khi thêm: ${err.message}`);
+                    await send(`❌ Error adding: ${err.message}`);
                 } else {
-                    await send(`✅ Đã thêm người dùng ${userID} vào nhóm!`);
+                    await send(`✅ Added user ${userID} to the group!`);
                 }
             });
         } catch (error) {
-            await send("❌ Có lỗi xảy ra khi thêm người dùng!");
+            await send("❌ An error occurred while adding user!");
         }
     }
 };

@@ -9,7 +9,7 @@ const command: ICommand = {
     name: "uptime",
     version: "1.0.0",
     author: "Donix",
-    description: "Xem thông tin bot (uptime, CPU, RAM, heap, ping)",
+    description: "View bot info (uptime, CPU, RAM, heap, ping)",
     category: "System"
   },
 
@@ -24,11 +24,11 @@ const command: ICommand = {
 
     const formatTime = (): string => {
       const parts: string[] = [];
-      if (days > 0) parts.push(`${days} ngày`);
-      if (hours % 24 > 0) parts.push(`${hours % 24} giờ`);
-      if (minutes % 60 > 0) parts.push(`${minutes % 60} phút`);
-      if (seconds % 60 > 0) parts.push(`${seconds % 60} giây`);
-      return parts.join(', ') || '0 giây';
+      if (days > 0) parts.push(`${days} days`);
+      if (hours % 24 > 0) parts.push(`${hours % 24} hours`);
+      if (minutes % 60 > 0) parts.push(`${minutes % 60} minutes`);
+      if (seconds % 60 > 0) parts.push(`${seconds % 60} seconds`);
+      return parts.join(', ') || '0 seconds';
     };
 
     const cpus = os.cpus();
@@ -44,7 +44,7 @@ const command: ICommand = {
     const heapTotal = (memUsage.heapTotal / 1024 / 1024).toFixed(2);
 
     const pingStart = Date.now();
-    api.sendMessage("🏓 Đang đo ping...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
+    api.sendMessage("🏓 Measuring ping...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
       if (err) return;
       const ping = Date.now() - pingStart;
 
@@ -54,7 +54,7 @@ const command: ICommand = {
 📊 RAM (RSS): ${rss} MB
 🗄️ Heap: ${heapUsed} MB / ${heapTotal} MB
 🏓 Ping: ${ping}ms
-🎲 Ran: ${commandRunCount} lần
+🎲 Ran: ${commandRunCount} times
             `.trim();
 
       api.sendMessage(message, event.threadID);

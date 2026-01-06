@@ -10,7 +10,7 @@ export const startBot = (): void => {
   loadCommands();
 
   if (!fs.existsSync(APPSTATE_PATH)) {
-    logger.error("Thiếu file appstate.json");
+    logger.error("Missing appstate.json file");
     return;
   }
 
@@ -18,20 +18,20 @@ export const startBot = (): void => {
   try {
     appState = JSON.parse(fs.readFileSync(APPSTATE_PATH, 'utf8'));
   } catch (error) {
-    logger.error("File appstate.json bị lỗi format JSON. Đang reset về rỗng.", error);
+    logger.error("appstate.json file has invalid JSON format. Resetting to empty.", error);
     appState = [];
     fs.writeFileSync(APPSTATE_PATH, '[]');
   }
 
   if (!appState || (Array.isArray(appState) && appState.length === 0)) {
-    logger.warn("File appstate.json rỗng. Vui lòng thêm cookies vào file appstate.json để bot hoạt động.");
+    logger.warn("appstate.json file is empty. Please add cookies to appstate.json for the bot to work.");
     return;
   }
 
   login({ appState }, (err: Error | null, api: IFCAU_API | null) => {
     if (err) {
-      console.error("❌ Login lỗi:", err);
-      logger.error("Login lỗi:", err);
+      console.error("❌ Login error:", err);
+      logger.error("Login error:", err);
       return;
     }
     if (!api) return;
@@ -42,7 +42,7 @@ export const startBot = (): void => {
 
     api.listenMqtt(async (err, event) => {
       if (err) {
-        logger.error("Lỗi listenMqtt:", err);
+        logger.error("listenMqtt error:", err);
         return;
       }
       await handleEvent(api, event);
