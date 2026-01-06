@@ -1,50 +1,50 @@
 [
   {
     "key": "fr",
-    "value": "0dYIoGIm2TrnLxcC9..BpWhz5..AAA.0.0.BpWh1k.AWeoUvuDCXm9rH3IhybxGL3a4d4",
+    "value": "0nbPPnrLfafgueHCn..BpXUug..AAA.0.0.BpXUw-.AWdjX5Ypacc4vBQ3pI2fSctACD8",
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-01-04T07:57:24.535Z",
-    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "creation": "2026-01-06T17:54:06.908Z",
+    "lastAccessed": "2026-01-06T17:54:07.418Z",
     "secure": true,
     "httpOnly": true,
-    "expires": "2026-04-04T07:57:24.000Z"
+    "expires": "2026-04-06T17:54:06.000Z"
   },
   {
     "key": "sb",
-    "value": "-Rxaabm08wjAVtcCdi1Zwkov",
+    "value": "oEtdacp8-XS7K3qmakNF7wXO",
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-01-04T07:57:24.543Z",
-    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "creation": "2026-01-06T17:54:06.920Z",
+    "lastAccessed": "2026-01-06T17:54:07.418Z",
     "secure": true,
     "httpOnly": true,
-    "expires": "2027-02-08T07:55:37.000Z"
+    "expires": "2027-02-10T17:51:28.000Z"
   },
   {
     "key": "fr",
-    "value": "0dYIoGIm2TrnLxcC9..BpWhz5..AAA.0.0.BpWhz5.AWdcORfTDVD-0gjDZkbBz2kGulI",
+    "value": "0nbPPnrLfafgueHCn..BpXUug..AAA.0.0.BpXUug.AWdZNKLCP6lb79loA98iybyUTZw",
     "domain": "messenger.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-01-04T07:57:24.543Z",
-    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "creation": "2026-01-06T17:54:06.920Z",
+    "lastAccessed": "2026-01-06T17:54:07.418Z",
     "secure": true,
     "httpOnly": true,
-    "expires": "2026-04-04T07:55:37.000Z"
+    "expires": "2026-04-06T17:51:28.000Z"
   },
   {
     "key": "sb",
-    "value": "-Rxaabm08wjAVtcCdi1Zwkov",
+    "value": "oEtdacp8-XS7K3qmakNF7wXO",
     "domain": "messenger.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-01-04T07:57:24.544Z",
-    "lastAccessed": "2026-01-04T07:57:25.127Z",
+    "creation": "2026-01-06T17:54:06.920Z",
+    "lastAccessed": "2026-01-06T17:54:07.418Z",
     "secure": true,
     "httpOnly": true,
-    "expires": "2027-02-08T07:55:37.000Z"
+    "expires": "2027-02-10T17:51:28.000Z"
   }
 ]

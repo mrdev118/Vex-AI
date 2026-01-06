@@ -14,7 +14,19 @@ export const startBot = (): void => {
     return;
   }
 
-  const appState = JSON.parse(fs.readFileSync(APPSTATE_PATH, 'utf8'));
+  let appState;
+  try {
+    appState = JSON.parse(fs.readFileSync(APPSTATE_PATH, 'utf8'));
+  } catch (error) {
+    logger.error("File appstate.json bị lỗi format JSON. Đang reset về rỗng.", error);
+    appState = [];
+    fs.writeFileSync(APPSTATE_PATH, '[]');
+  }
+
+  if (!appState || (Array.isArray(appState) && appState.length === 0)) {
+    logger.warn("File appstate.json rỗng. Vui lòng thêm cookies vào file appstate.json để bot hoạt động.");
+    return;
+  }
 
   login({ appState }, (err: Error | null, api: IFCAU_API | null) => {
     if (err) {
