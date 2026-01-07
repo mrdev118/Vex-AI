@@ -41,7 +41,7 @@ export const handleNoPrefixCommand = async (
 
     if (!permCheck.allowed) {
       const messageHelper = createMessageHelper(api, event);
-      await messageHelper.send(permCheck.reason || '❌ Bạn không có quyền sử dụng lệnh này!');
+      await messageHelper.send(permCheck.reason || '❌ You do not have permission to use this command!');
       return;
     }
 
@@ -49,11 +49,11 @@ export const handleNoPrefixCommand = async (
     const hasAccess = await hasPermission(api, event.senderID, event, requiredRole);
 
     if (!hasAccess) {
-      const roleNames = ['Người dùng', 'Admin nhóm', 'Admin bot', 'Owner'];
+      const roleNames = ['User', 'Group Admin', 'Bot Admin', 'Owner'];
       const messageHelper = createMessageHelper(api, event);
       await messageHelper.send(
-        `❌ Bạn không có quyền sử dụng lệnh này!\n` +
-        `Yêu cầu: ${roleNames[requiredRole]} (${requiredRole})`
+        `❌ You do not have permission to use this command!\n` +
+        `Required: ${roleNames[requiredRole]} (${requiredRole})`
       );
       return;
     }
@@ -74,7 +74,7 @@ export const handleNoPrefixCommand = async (
     });
   } catch (error) {
     if (error instanceof Error && !error.message.includes('skip')) {
-      logger.error(`Lỗi khi chạy noprefix ${inCmd}:`, error);
+      logger.error(`Error running noprefix ${inCmd}:`, error);
     }
   }
 };

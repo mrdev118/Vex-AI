@@ -41,18 +41,18 @@ const CONFIG_PATH = path.resolve(__dirname, '../config.json');
 
 const loadConfig = (): BotConfig => {
   if (!fs.existsSync(CONFIG_PATH)) {
-    logger.error(`❌ Không tìm thấy file config.json tại: ${CONFIG_PATH}`);
-    logger.error('Vui lòng tạo file config.json trước khi chạy bot!');
+    logger.error(`❌ Config file not found at: ${CONFIG_PATH}`);
+    logger.error('Please create config.json before running the bot!');
     throw new Error(`Config file not found: ${CONFIG_PATH}`);
   }
 
   try {
     const configData = fs.readFileSync(CONFIG_PATH, 'utf8');
     const config = JSON.parse(configData);
-    logger.info('✅ Đã load config từ file');
+    logger.info('✅ Configuration loaded from file');
     return config;
   } catch (error) {
-    logger.error('❌ Lỗi đọc config file:', error);
+    logger.error('❌ Error reading config file:', error);
     throw new Error(`Failed to load config: ${error}`);
   }
 };
@@ -71,7 +71,7 @@ export const EXTERNAL_API_KEY = botConfig.externalApi?.key || '';
 
 export const isOwner = (userID: string): boolean => {
   if (!OWNER_ID) {
-    logger.warn('⚠️ Chưa có owner ID trong config!');
+    logger.warn('⚠️ Owner ID not found in config!');
     return false;
   }
   return OWNER_ID === userID;

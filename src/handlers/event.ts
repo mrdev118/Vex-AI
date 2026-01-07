@@ -51,11 +51,31 @@ export const handleEvent = async (
                 logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
               }
             });
+            continue;
           }
+          // Welcome message for non-banned users
+          api.sendMessage(`Welcome ${participant.fullName} to the group! Have a great time here!`, threadID);
+        }
+      } else {
+        // Welcome message if no ban list
+        for (const participant of addedParticipants) {
+          api.sendMessage(`Welcome ${participant.fullName} to the group! Have a great time here!`, threadID);
         }
       }
     } catch (error) {
-      logger.error('Error in auto-kick logic:', error);
+      logger.error('Error in auto-kick/welcome logic:', error);
+    }
+  }
+
+  // Goodbye message
+  if (event.type === "event" && event.logMessageType === 'log:unsubscribe') {
+    const threadID = event.threadID;
+    const leftParticipant = (event as any).logMessageData?.leftParticipantFbId;
+    if (leftParticipant) {
+      api.getUserInfo(leftParticipant, (err, userInfo) => {
+        const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
+        api.sendMessage(`${name} has left the group. Goodbye!`, threadID);
+      });
     }
   }
 };

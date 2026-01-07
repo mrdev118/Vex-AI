@@ -27,7 +27,7 @@ const registerCommand = (command: ICommand, fullPath: string, dir: string): void
       command.config.aliases.forEach(alias => {
         const aliasLower = alias.toLowerCase();
         if (client.noprefix.has(aliasLower) && client.noprefix.get(aliasLower)?.config.name !== command.config.name) {
-          logger.warn(`${prefix} Alias "${alias}" đã được sử dụng bởi lệnh khác, bỏ qua`);
+          logger.warn(`${prefix} Alias "${alias}" is already used by another command, skipping`);
         } else {
           client.noprefix.set(aliasLower, command);
         }
@@ -39,7 +39,7 @@ const registerCommand = (command: ICommand, fullPath: string, dir: string): void
       command.config.aliases.forEach(alias => {
         const aliasLower = alias.toLowerCase();
         if (client.commands.has(aliasLower) && client.commands.get(aliasLower)?.config.name !== command.config.name) {
-          logger.warn(`${prefix} Alias "${alias}" đã được sử dụng bởi lệnh khác, bỏ qua`);
+          logger.warn(`${prefix} Alias "${alias}" is already used by another command, skipping`);
         } else {
           client.commands.set(aliasLower, command);
         }
@@ -77,7 +77,7 @@ export const loadSingleCommand = (commandName: string): { success: boolean; mess
   const filePath = findCommandFile(commandName);
 
   if (!filePath) {
-    return { success: false, message: `❌ Không tìm thấy file lệnh "${commandName}"` };
+    return { success: false, message: `❌ Command file not found: "${commandName}"` };
   }
 
   try {
@@ -85,7 +85,7 @@ export const loadSingleCommand = (commandName: string): { success: boolean; mess
     const command: ICommand = require(filePath);
 
     if (!command.config || !command.config.name) {
-      return { success: false, message: `❌ File không phải là command hợp lệ` };
+      return { success: false, message: `❌ File is not a valid command` };
     }
 
     const dir = path.dirname(filePath);
@@ -96,12 +96,12 @@ export const loadSingleCommand = (commandName: string): { success: boolean; mess
 
     return {
       success: true,
-      message: `✅ Đã tải lại lệnh: ${prefix} ${command.config.name}`
+      message: `✅ Reloaded command: ${prefix} ${command.config.name}`
     };
   } catch (error) {
     return {
       success: false,
-      message: `❌ Lỗi khi load: ${error instanceof Error ? error.message : String(error)}`
+      message: `❌ Error loading: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 };
@@ -121,9 +121,9 @@ export const loadMultipleCommands = (commandNames: string[]): { success: boolean
     }
   }
 
-  let message = `✅ Đã tải ${loaded} lệnh`;
+  let message = `✅ Loaded ${loaded} commands`;
   if (failed > 0) {
-    message += `\n❌ Thất bại ${failed} lệnh: ${failedCommands.join(', ')}`;
+    message += `\n❌ Failed ${failed} commands: ${failedCommands.join(', ')}`;
   }
 
   return {
@@ -138,7 +138,7 @@ export const unloadCommand = (commandName: string): { success: boolean; message:
   const command = client.commands.get(commandName) || client.noprefix.get(commandName);
 
   if (!command) {
-    return { success: false, message: `❌ Không tìm thấy lệnh "${commandName}"` };
+    return { success: false, message: `❌ Command not found: "${commandName}"` };
   }
 
   client.commands.delete(commandName);
@@ -170,12 +170,12 @@ export const unloadCommand = (commandName: string): { success: boolean; message:
 
   let extraInfo = '';
   if (removedReplies > 0 || removedReactions > 0) {
-    extraInfo = ` (đã xóa ${removedReplies} handleReply, ${removedReactions} handleReaction)`;
+    extraInfo = ` (removed ${removedReplies} handleReply, ${removedReactions} handleReaction)`;
   }
 
   return {
     success: true,
-    message: `✅ Đã gỡ bỏ lệnh "${commandName}"${command.config?.aliases ? ` và ${command.config.aliases.length} alias` : ''}${extraInfo}`
+    message: `✅ Unloaded command "${commandName}"${command.config?.aliases ? ` and ${command.config.aliases.length} aliases` : ''}${extraInfo}`
   };
 };
 
@@ -202,12 +202,12 @@ export const loadCommands = (dir: string = COMMANDS_DIR): void => {
           registerCommand(command, fullPath, dir);
         }
       } catch (error) {
-        logger.error(`Lỗi load file ${fullPath}:`, error);
+        logger.error(`Error loading file ${fullPath}:`, error);
       }
     }
   }
 
   if (dir === COMMANDS_DIR) {
-    logger.info(`Tổng kết: ${client.commands.size} lệnh prefix, ${client.noprefix.size} lệnh no-prefix`);
+    logger.info(`Summary: ${client.commands.size} prefix commands, ${client.noprefix.size} no-prefix commands`);
   }
 };
