@@ -54,12 +54,12 @@ export const handleEvent = async (
             continue;
           }
           // Welcome message for non-banned users
-          api.sendMessage(`Welcome ${participant.fullName} to the group! Have a great time here!`, threadID);
+          api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 ${participant.fullName}\n𝗦𝗲𝗿𝘃𝗲𝗿to follow all the rules, you can see all the rules on our 𝗗𝗶𝘀𝗰𝗼𝗿𝗱 server\nhttps://discord.gg/WXpMxBEYYA\n\n𝗦𝗘𝗥𝗩𝗘𝗥 𝗜𝗡𝗙𝗢:\n𝗡𝗮𝗺𝗲: VexonSMP\n𝗜𝗣: vexonsmp.sereinhost.com\n𝗣𝗼𝗿𝘁: 25581\n\n• Feel free to invite your friends here on our server for more fun`, threadID);
         }
       } else {
         // Welcome message if no ban list
         for (const participant of addedParticipants) {
-          api.sendMessage(`Welcome ${participant.fullName} to the group! Have a great time here!`, threadID);
+          api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 ${participant.fullName}\n𝗦𝗲𝗿𝘃𝗲𝗿to follow all the rules, you can see all the rules on our 𝗗𝗶𝘀𝗰𝗼𝗿𝗱 server\nhttps://discord.gg/WXpMxBEYYA\n\n𝗦𝗘𝗥𝗩𝗘𝗥 𝗜𝗡𝗙𝗢:\n𝗡𝗮𝗺𝗲: VexonSMP\n𝗜𝗣: vexonsmp.sereinhost.com\n𝗣𝗼𝗿𝘁: 25581\n\n• Feel free to invite your friends here on our server for mGoodbye`, threadID);
         }
       }
     } catch (error) {
@@ -74,7 +74,7 @@ export const handleEvent = async (
     if (leftParticipant) {
       api.getUserInfo(leftParticipant, (err, userInfo) => {
         const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
-        api.sendMessage(`${name} has left the group. Goodbye!`, threadID);
+        api.sendMessage(`${name} has left the group. Goodluck to your Journey!`, threadID);
       });
     }
   }
