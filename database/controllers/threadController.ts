@@ -25,6 +25,10 @@ export const Threads = {
       thread.rankup = rankup;
       updated = true;
     }
+    if (thread.bannedUsers === undefined) {
+      thread.bannedUsers = "[]";
+      updated = true;
+    }
     if (updated) {
       await thread.save();
     }

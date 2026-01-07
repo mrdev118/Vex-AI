@@ -6,6 +6,7 @@ interface ThreadAttributes {
   name: string;
   prefix: string;
   rankup: boolean;
+  bannedUsers?: string; // JSON string array of user IDs
   settings?: string; // JSON string để lưu các cài đặt
   info?: Record<string, unknown>;
 }
@@ -15,6 +16,7 @@ class Thread extends Model<ThreadAttributes> implements ThreadAttributes {
   public name!: string;
   public prefix!: string;
   public rankup!: boolean;
+  public bannedUsers?: string;
   public settings?: string;
   public info?: Record<string, unknown>;
 }
@@ -40,6 +42,10 @@ Thread.init({
   rankup: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  bannedUsers: {
+    type: DataTypes.TEXT,
+    defaultValue: "[]"
   },
   settings: {
     type: DataTypes.TEXT,
