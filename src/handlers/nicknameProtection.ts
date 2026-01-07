@@ -57,7 +57,7 @@ export const handleNicknameProtection = async (
             } else {
               logger.info(`Group name restored to protected name in ${threadID}`);
               api.sendMessage(
-                `⚠️ Only group admins can change the group name!\n\n✅ Group name restored to: ${PROTECTED_GROUP_NAME}`,
+                `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\nOnly group admins can change the group name.\n\n✅ Group name has been restored to:\n${PROTECTED_GROUP_NAME}\n\n━━━━━━━━━━━━━━━━━━━━`,
                 threadID
               );
             }
@@ -112,7 +112,7 @@ export const handleNicknameProtection = async (
                     const targetName = userInfo[targetUserID]?.name || 'another user';
                     
                     api.sendMessage(
-                      `⚠️ @${authorName}, you can only change your own nickname, not ${targetName}'s!\n\n✅ Nickname restored.`,
+                      `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\n@${authorName}, you can only change your own nickname, not ${targetName}'s!\n\n✅ Nickname has been restored.\n\n━━━━━━━━━━━━━━━━━━━━`,
                       threadID
                     );
                   });
