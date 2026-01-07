@@ -1,4 +1,4 @@
-import path from 'path';
+import * as path from 'path';
 import { Sequelize } from 'sequelize';
 
 const DB_PATH = path.resolve(__dirname, '../database.sqlite');

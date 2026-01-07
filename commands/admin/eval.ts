@@ -1,5 +1,5 @@
 import axios from 'axios';
-import fs from 'fs';
+import * as fs from 'fs';
 import { logger } from '../../src/utils/logger';
 import { ICommand, IRunParams } from '../../types';
 

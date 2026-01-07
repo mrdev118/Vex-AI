@@ -17,23 +17,23 @@ const command: ICommand = {
     try {
       const user = await User.findByPk(senderID);
 
-      let msg = `=== 👤 USER INFO ===\n`;
+      let msg = `╔═══════════════════════════╗\n║       👤 USER INFO        ║\n╚═══════════════════════════╝\n\n`;
       if (user) {
-        msg += `Name: ${user.name}\n`;
-        msg += `Gender: ${user.gender}\n`;
-        msg += `Money: ${user.money}$\n`;
-        msg += `EXP: ${user.exp}\n`;
+        msg += `👤 Name: ${user.name}\n`;
+        msg += `⚧️ Gender: ${user.gender}\n`;
+        msg += `💰 Money: ${user.money}$\n`;
+        msg += `⭐ EXP: ${user.exp}\n`;
       } else {
         msg += `❌ User info not found\n`;
       }
 
       if (isGroup) {
         const thread = await Thread.findByPk(threadID);
-        msg += `\n=== 🏠 GROUP INFO ===\n`;
+        msg += `\n╔═══════════════════════════╗\n║      🏠 GROUP INFO        ║\n╚═══════════════════════════╝\n\n`;
         if (thread) {
-          msg += `Group Name: ${thread.name}\n`;
-          msg += `Prefix: ${thread.prefix}\n`;
-          msg += `Rankup: ${thread.rankup ? 'On' : 'Off'}\n`;
+          msg += `🏠 Group Name: ${thread.name}\n`;
+          msg += `⚡ Prefix: ${thread.prefix}\n`;
+          msg += `📈 Rankup: ${thread.rankup ? '✅ Enabled' : '❌ Disabled'}\n`;
         } else {
           msg += `❌ Group info not found\n`;
         }

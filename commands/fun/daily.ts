@@ -7,10 +7,11 @@ const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 const command: ICommand = {
   config: {
     name: "daily",
-    version: "1.0.0",
+    version: "2.0.0",
     author: "Donix",
-    description: "Điểm danh nhận tiền hàng ngày",
-    category: "Fun"
+    description: "Claim your daily rewards (money & EXP)",
+    category: "Fun",
+    usages: ".daily"
   },
 
   run: async ({ api, event }: IRunParams) => {
@@ -23,15 +24,22 @@ const command: ICommand = {
     if (timeLeft > 0) {
       const hours = Math.floor(timeLeft / (60 * 60 * 1000));
       const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
-      api.sendMessage(
-        `⏰ Bạn đã điểm danh rồi! Vui lòng đợi ${hours} giờ ${minutes} phút nữa.`,
-        threadID
-      );
+      const msg = `╔═══════════════════════════╗
+║     ⏰ DAILY COOLDOWN      ║
+╚═══════════════════════════╝
+
+❌ You've already claimed your daily reward!
+
+⏳ Time remaining:
+${hours} hours ${minutes} minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Come back later to claim again!`;
+      api.sendMessage(msg, threadID);
       return;
     }
 
     const reward = Math.floor(Math.random() * 401) + 100;
-
     const expReward = Math.floor(Math.random() * 41) + 10;
 
     try {
@@ -40,16 +48,26 @@ const command: ICommand = {
 
       lastDaily.set(senderID, now);
 
-      api.sendMessage(
-        `✅ Điểm danh thành công!\n\n` +
-        `💰 Nhận được: ${reward}$\n` +
-        `⭐ Nhận được: ${expReward} EXP\n\n` +
-        `💵 Tổng tiền: ${newBalance}$\n` +
-        `📊 Tổng EXP: ${newExp}`,
-        threadID
-      );
+      const msg = `╔═══════════════════════════╗
+║    ✅ DAILY CLAIMED!       ║
+╚═══════════════════════════╝
+
+🎁 Rewards Received:
+
+💰 Money: +$${reward.toLocaleString()}
+⭐ EXP: +${expReward} XP
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Current Balance:
+
+💵 Total Money: $${newBalance.toLocaleString()}
+📈 Total EXP: ${newExp.toLocaleString()} XP
+
+⏰ Next claim: 24 hours`;
+
+      api.sendMessage(msg, threadID);
     } catch (error) {
-      api.sendMessage("❌ Có lỗi xảy ra khi điểm danh!", threadID);
+      api.sendMessage("❌ An error occurred while claiming daily rewards!", threadID);
     }
   }
 };

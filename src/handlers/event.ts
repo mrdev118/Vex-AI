@@ -38,16 +38,16 @@ export const handleEvent = async (
       
       if (botAdded) {
         // Set bot nickname
-        api.changeNickname("🤖 VEXON BOT", threadID, api.getCurrentUserID(), (err) => {
+        api.changeNickname("𝗩𝗲𝘅 𝗔𝗜 [ . ]", threadID, api.getCurrentUserID(), (err) => {
           if (!err) {
-            logger.info(`Bot nickname set to 🤖 VEXON BOT in group ${threadID}`);
+            logger.info(`Bot nickname set to 𝗩𝗲𝘅 𝗔𝗜 in group ${threadID}`);
           }
         });
         
         // Send bot connected message with image
         const connectedMessage = {
-          body: `✅ 🤖 Bot Connected!\n\nHello! I'm VEXON BOT. I'm here to help manage your group with amazing commands and features.\n\nUse "help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581`,
-          attachment: require('fs').createReadStream(__dirname + '/../../attached_assets/stock_images/futuristic_bot_logo__28f312bd.jpg')
+          body: `✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581`,
+          attachment: require('fs').createReadStream(__dirname + '/../../../attached_assets/connected.gif')
         };
         api.sendMessage(connectedMessage, threadID);
       }
@@ -75,8 +75,10 @@ export const handleEvent = async (
           // Welcome message for non-banned users (skip if bot was just added)
           if (!botAdded) {
             const welcomeMessage = {
-              body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 ${participant.fullName}\n𝗦𝗲𝗿𝘃𝗲𝗿to follow all the rules, you can see all the rules on our 𝗗𝗶𝘀𝗰𝗼𝗿𝗱 server\nhttps://discord.gg/WXpMxBEYYA\n\n𝗦𝗘𝗥𝗩𝗘𝗥 𝗜𝗡𝗙𝗢:\n𝗡𝗮𝗺𝗲: VexonSMP\n𝗜𝗣: vexonsmp.sereinhost.com\n𝗣𝗼𝗿𝘁: 25581\n\n• Feel free to invite your friends here on our server for more fun`,
-              attachment: require('fs').createReadStream(__dirname + '/../../attached_assets/stock_images/welcome_banner_backg_032929f9.jpg')
+              body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
+              attachment: require('fs').createReadStream(
+                __dirname + '/../../../attached_assets/welcome.jpg'
+              )
             };
             api.sendMessage(welcomeMessage, threadID);
           }
@@ -87,8 +89,10 @@ export const handleEvent = async (
           // Skip if bot was just added
           if (!botAdded) {
             const welcomeMessage = {
-              body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 ${participant.fullName}\n𝗦𝗲𝗿𝘃𝗲𝗿to follow all the rules, you can see all the rules on our 𝗗𝗶𝘀𝗰𝗼𝗿𝗱 server\nhttps://discord.gg/WXpMxBEYYA\n\n𝗦𝗘𝗥𝗩𝗘𝗥 𝗜𝗡𝗙𝗢:\n𝗡𝗮𝗠𝗲: VexonSMP\n𝗜𝗣: vexonsmp.sereinhost.com\n𝗣𝗼𝗿𝘁: 25581\n\n• Feel free to invite your friends here on our server for more fun`,
-              attachment: require('fs').createReadStream(__dirname + '/../../attached_assets/stock_images/welcome_banner_backg_032929f9.jpg')
+              body: `${participant.fullName} was given a second 𝗖𝗵𝗮𝗻𝗰𝗲. Don't waste it.!`,
+              attachment: require('fs').createReadStream(
+                __dirname + '/../../../attached_assets/welcome.jpg'
+              )
             };
             api.sendMessage(welcomeMessage, threadID);
           }
@@ -107,8 +111,10 @@ export const handleEvent = async (
       api.getUserInfo(leftParticipant, (err, userInfo) => {
         const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
         const goodbyeMessage = {
-          body: `${name} has left the group. Goodluck to your Journey!`,
-          attachment: require('fs').createReadStream(__dirname + '/../../attached_assets/stock_images/goodbye_banner_backg_ab2ebd2d.jpg')
+          body: `${name} has left the group. Good luck on your journey!`,
+          attachment: require('fs').createReadStream(
+            __dirname + '/../../../attached_assets/goodbye.jpeg'
+          )
         };
         api.sendMessage(goodbyeMessage, threadID);
       });

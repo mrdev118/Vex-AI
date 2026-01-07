@@ -20,20 +20,46 @@ const command: ICommand = {
             return;
         }
 
-        if (args.length === 0) {
-            await send("Please tag the user to ban or enter userID!");
+        const eventWithReply = event as any;
+        
+        if (args.length === 0 && !eventWithReply.messageReply) {
+            await send("Please tag the user to ban, reply to their message, or enter their userID!");
             return;
         }
 
-        let targetID = args[0];
+        let targetID: string = "";
 
-        if (targetID.startsWith('@')) {
-            const mentions = (event as any).mentions || {};
-            targetID = Object.keys(mentions)[0] || targetID.replace('@', '');
+        // Check if replying to a message
+        if (eventWithReply.messageReply) {
+            targetID = eventWithReply.messageReply.senderID;
+        }
+        // Check for mentions
+        else if (event.mentions && Object.keys(event.mentions).length > 0) {
+            targetID = Object.keys(event.mentions)[0];
+        }
+        // Check args for userID
+        else if (args[0]) {
+            targetID = args[0].replace('@', '').trim();
+        }
+
+        if (!targetID || targetID === '') {
+            await send("❌ Unable to identify the user to ban. Please tag them, reply to their message, or provide their userID.");
+            return;
+        }
+
+        // Don't allow banning yourself or the bot
+        if (targetID === event.senderID) {
+            await send("❌ You cannot ban yourself!");
+            return;
+        }
+
+        if (targetID === api.getCurrentUserID()) {
+            await send("❌ I cannot ban myself!");
+            return;
         }
 
         try {
-            // Update banned list in DB
+            // Update banned list in DB first
             const threadData = await Threads.getData(event.threadID);
             let bannedList: string[] = [];
             try {
@@ -42,21 +68,29 @@ const command: ICommand = {
                 bannedList = [];
             }
 
-            if (!bannedList.includes(targetID)) {
-                bannedList.push(targetID);
-                threadData.bannedUsers = JSON.stringify(bannedList);
-                await threadData.save();
+            if (bannedList.includes(targetID)) {
+                await send(`⚠️ User ${targetID} is already banned from this group!`);
+                return;
             }
 
+            bannedList.push(targetID);
+            threadData.bannedUsers = JSON.stringify(bannedList);
+            await threadData.save();
+
+            // Now remove the user from group
             api.removeUserFromGroup(targetID, event.threadID, async (err?: Error) => {
                 if (err) {
-                    await send(`❌ Error banning: ${err.message}`);
+                    await send(`❌ Error removing user: ${err.message}\n(User is still added to ban list)`);
                 } else {
-                    await send(`✅ Banned user ${targetID} from the group permanently!`);
+                    // Get user info for better message
+                    api.getUserInfo(targetID, async (infoErr, userInfo) => {
+                        const userName = userInfo && userInfo[targetID] ? userInfo[targetID].name : targetID;
+                        await send(`✅ Successfully banned ${userName} (${targetID}) from the group permanently!`);
+                    });
                 }
             });
-        } catch (error) {
-            await send("❌ An error occurred while banning user!");
+        } catch (error: any) {
+            await send(`❌ An error occurred while banning user: ${error.message || error}`);
         }
     }
 };

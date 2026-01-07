@@ -18,16 +18,42 @@ const command: ICommand = {
             return;
         }
 
-        if (args.length === 0) {
-            await send("Please tag the user to kick or enter userID!");
+        const eventWithReply = event as any;
+        
+        if (args.length === 0 && !eventWithReply.messageReply) {
+            await send("Please tag the user to kick, reply to their message, or enter their userID!");
             return;
         }
 
-        let targetID = args[0];
+        let targetID: string = "";
 
-        if (targetID.startsWith('@')) {
-            const mentions = (event as any).mentions || {};
-            targetID = Object.keys(mentions)[0] || targetID.replace('@', '');
+        // Check if replying to a message
+        if (eventWithReply.messageReply) {
+            targetID = eventWithReply.messageReply.senderID;
+        }
+        // Check for mentions
+        else if (event.mentions && Object.keys(event.mentions).length > 0) {
+            targetID = Object.keys(event.mentions)[0];
+        }
+        // Check args for userID
+        else if (args[0]) {
+            targetID = args[0].replace('@', '').trim();
+        }
+
+        if (!targetID || targetID === '') {
+            await send("❌ Unable to identify the user to kick. Please tag them, reply to their message, or provide their userID.");
+            return;
+        }
+
+        // Don't allow kicking yourself or the bot
+        if (targetID === event.senderID) {
+            await send("❌ You cannot kick yourself!");
+            return;
+        }
+
+        if (targetID === api.getCurrentUserID()) {
+            await send("❌ I cannot kick myself!");
+            return;
         }
 
         try {
@@ -35,11 +61,15 @@ const command: ICommand = {
                 if (err) {
                     await send(`❌ Error kicking: ${err.message}`);
                 } else {
-                    await send(`👢 Kicked user ${targetID} from the group!`);
+                    // Get user info for better message
+                    api.getUserInfo(targetID, async (infoErr, userInfo) => {
+                        const userName = userInfo && userInfo[targetID] ? userInfo[targetID].name : targetID;
+                        await send(`👢 Kicked ${userName} (${targetID}) from the group!`);
+                    });
                 }
             });
-        } catch (error) {
-            await send("❌ An error occurred while kicking user!");
+        } catch (error: any) {
+            await send(`❌ An error occurred while kicking user: ${error.message || error}`);
         }
     }
 };

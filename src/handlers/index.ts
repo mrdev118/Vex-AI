@@ -2,6 +2,7 @@ import type { IFCAU_API, IFCAU_ListenMessage } from '@dongdev/fca-unofficial';
 import handleCreateData from '../../database/handleCreateData';
 import { MessageEventType, MessageReactionEventType, MessageReplyEventType, PresenceEventType, ReadReceiptEventType, ThreadEventType, TypingEventType } from '../../types';
 import { hooks } from '../hooks';
+import { messageLogger } from '../utils/messageLogger';
 import { handleAnyEvent } from './anyEvent';
 import { handleChat } from './chat';
 import { handleCommand } from './command';
@@ -40,6 +41,9 @@ export const handleEventMain = async (
       if (event.type === "message") {
         const msgEvent = event as MessageEventType;
         await handleCreateData(api, msgEvent);
+
+        // Log the message to terminal
+        await messageLogger.logMessage(api, msgEvent);
 
         await hooks.executeOnChat(api, msgEvent);
         await handleChat(api, msgEvent);

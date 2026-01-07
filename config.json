@@ -1,6 +1,6 @@
 {
   "bot": {
-    "prefix": "!",
+    "prefix": ".",
     "name": "VexonSMP"
   },
   "paths": {
@@ -15,8 +15,12 @@
   },
   "externalApi": {
     "url": "https://minhdong.site",
-    "key": "YOUR_API_KEY_HERE"
+    "key": "donix_b507bb009f56b5769bc84f420a96474c"
   },
+  "disabledCommands": [
+    "ai",
+    "vdgai"
+  ],
   "logger": {
     "level": "info",
     "enableColors": true,

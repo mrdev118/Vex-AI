@@ -12,10 +12,18 @@ const command: ICommand = {
     run: async ({ api, event, args }: IRunParams) => {
         const timeStart = Date.now();
 
-        api.sendMessage("Pong! 🏓 Measuring speed...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
+        api.sendMessage("🏓 Pong! Measuring latency...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
             if(err) return;
             const timeEnd = Date.now();
-            api.sendMessage(`Ping: ${timeEnd - timeStart}ms`, event.threadID);
+            const ping = timeEnd - timeStart;
+            
+            let status = "🟢 Excellent";
+            if (ping > 500) status = "🔴 Poor";
+            else if (ping > 200) status = "🟡 Fair";
+            else if (ping > 100) status = "🟢 Good";
+            
+            const msg = `╔═══════════════════════════╗\n║     🏓 PING RESPONSE      ║\n╚═══════════════════════════╝\n\n⚡ Latency: ${ping}ms\n📊 Status: ${status}\n🤖 Bot: Online`;
+            api.sendMessage(msg, event.threadID);
         });
     }
 };

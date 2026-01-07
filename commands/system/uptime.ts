@@ -44,18 +44,23 @@ const command: ICommand = {
     const heapTotal = (memUsage.heapTotal / 1024 / 1024).toFixed(2);
 
     const pingStart = Date.now();
-    api.sendMessage("🏓 Measuring ping...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
+    api.sendMessage("📊 Gathering system information...", event.threadID, (err?: Error | null, info?: { threadID: string; messageID: string; timestamp: number } | null) => {
       if (err) return;
       const ping = Date.now() - pingStart;
 
-      const message = `
+      const message = `╔═══════════════════════════╗
+║    🤖 𝗩𝗘𝗫 𝗔𝗜 𝗦𝗧𝗔𝗧𝗨𝗦    ║
+╚═══════════════════════════╝
+
 ⏱️ Uptime: ${formatTime()}
-💻 CPU: ${cpuUsage.toFixed(1)}%
+💻 CPU Usage: ${cpuUsage.toFixed(1)}%
 📊 RAM (RSS): ${rss} MB
-🗄️ Heap: ${heapUsed} MB / ${heapTotal} MB
-🏓 Ping: ${ping}ms
-🎲 Ran: ${commandRunCount} times
-            `.trim();
+🗄️ Heap: ${heapUsed}/${heapTotal} MB
+🏓 Latency: ${ping}ms
+🎲 Commands Run: ${commandRunCount}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Status: Online & Running`;
 
       api.sendMessage(message, event.threadID);
     });

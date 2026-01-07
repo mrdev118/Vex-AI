@@ -6,7 +6,7 @@ const command: ICommand = {
   config: {
     name: "ip",
     description: "Send server IP",
-    category: "Fun",
+    category: "Utility",
     hasPrefix: false,
     aliases: ["serverip", "address", "serverinfo", "connect", "join"]
   },

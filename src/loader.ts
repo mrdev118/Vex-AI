@@ -1,12 +1,22 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ICommand } from '../types';
 import { client } from './client';
-import { COMMANDS_DIR } from './config';
+import { COMMANDS_DIR, DISABLED_COMMANDS } from './config';
 import { logger } from './utils/logger';
 
 const registerCommand = (command: ICommand, fullPath: string, dir: string): void => {
   if (!command.config || !command.config.name) return;
+
+  const cmdNameLower = command.config.name.toLowerCase();
+  const isDisabled = DISABLED_COMMANDS.includes(cmdNameLower) ||
+    (Array.isArray(command.config.aliases) && command.config.aliases.some(a => DISABLED_COMMANDS.includes(a.toLowerCase())));
+  if (isDisabled) {
+    const category = path.relative(COMMANDS_DIR, dir).replace(/\\/g, '/') || 'root';
+    const prefix = category !== 'root' ? `[${category}]` : '';
+    logger.info(`${prefix} Skipping disabled command: ${command.config.name}`);
+    return;
+  }
 
   const category = path.relative(COMMANDS_DIR, dir).replace(/\\/g, '/') || 'root';
   const prefix = category !== 'root' ? `[${category}]` : '';

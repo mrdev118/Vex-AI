@@ -6,7 +6,7 @@ const command: ICommand = {
         version: "1.0.0",
         author: "Donix",
         description: "View weather (mock)",
-        category: "Fun",
+        category: "Utility",
         usages: "!weather <city>"
     },
 

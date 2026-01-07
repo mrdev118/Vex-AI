@@ -6,7 +6,7 @@ const command: ICommand = {
     version: "1.0.0",
     author: "Donix",
     description: "Máy tính đơn giản",
-    category: "Fun",
+    category: "Utility",
     usages: "!calc <biểu thức>"
   },
 

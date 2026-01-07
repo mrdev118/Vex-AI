@@ -1,7 +1,7 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import { MessageEventType } from '../../types';
 import { client } from '../client';
-import { PREFIX, botConfig } from '../config';
+import { PREFIX, botConfig, DISABLED_COMMANDS } from '../config';
 import { logger } from '../utils/logger';
 import { Users } from '../../database/controllers/userController';
 import { Threads } from '../../database/controllers/threadController';
@@ -73,6 +73,10 @@ export const handlePrefixCommand = async (
       return true;
     }
   } else {
+    // Don't show error message for disabled commands
+    if (DISABLED_COMMANDS.includes(commandName)) {
+      return false;
+    }
     api.sendMessage(`❓ Command not found "${commandName}". Use ${PREFIX}help to view the list.`, event.threadID);
     return true;
   }

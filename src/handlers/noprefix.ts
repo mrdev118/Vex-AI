@@ -18,12 +18,8 @@ export const handleNoPrefixCommand = async (
   const parts = body.trim().split(/\s+/);
   const inCmd = parts.shift()?.toLowerCase() || '';
 
-  let command = client.noprefix.get(inCmd);
-  if (!command) {
-    command = [...client.noprefix.values()].find(c =>
-      c.config.aliases?.includes(inCmd)
-    );
-  }
+  // Get command by name or alias (but not both to avoid duplicates)
+  const command = client.noprefix.get(inCmd);
 
   if (!command) return;
 

@@ -1,6 +1,6 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import login from '@dongdev/fca-unofficial';
-import fs from 'fs';
+import * as fs from 'fs';
 import { APPSTATE_PATH, config } from './config';
 import { handleEvent } from './handlers';
 import { loadCommands } from './loader';

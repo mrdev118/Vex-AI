@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ApiOptions } from '../types';
 import { logger } from './utils/logger';
 
@@ -22,6 +22,7 @@ interface BotConfig {
     url: string;
     key: string;
   };
+  disabledCommands?: string[];
   logger: {
     level: string;
     enableColors: boolean;
@@ -68,6 +69,7 @@ export const OWNER_ID = botConfig.permissions.owner;
 export const ADMIN_IDS = botConfig.permissions.admins || [];
 export const EXTERNAL_API_URL = botConfig.externalApi?.url || '';
 export const EXTERNAL_API_KEY = botConfig.externalApi?.key || '';
+export const DISABLED_COMMANDS = (botConfig.disabledCommands || []).map(name => name.toLowerCase());
 
 export const isOwner = (userID: string): boolean => {
   if (!OWNER_ID) {

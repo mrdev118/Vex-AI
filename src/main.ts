@@ -3,12 +3,12 @@ import { botConfig } from './config';
 import { initCookies } from './cookie';
 import { logger } from './utils/logger';
 import type { LogLevel } from './utils/logger';
-import express from 'express';
+import express, { Request, Response } from 'express';
 
 const app = express();
 const port = 5000;
 
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.send('Bot is running!');
 });
 
