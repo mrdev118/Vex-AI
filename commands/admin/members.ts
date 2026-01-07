@@ -41,9 +41,7 @@ const command: ICommand = {
             return;
           }
 
-          let message = `╔═══════════════════════════╗\n`;
-          message += `║  𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗠𝗲𝗺𝗯𝗲𝗿 𝗟𝗶𝘀𝘁  ║\n`;
-          message += `╚═══════════════════════════╝\n\n`;
+          let message = `𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗠𝗲𝗺𝗯𝗲𝗿 𝗟𝗶𝘀𝘁\n\n`;
           message += `👥 Total Members: ${participantIDs.length}\n\n`;
 
           // Sort members alphabetically by name
@@ -56,10 +54,8 @@ const command: ICommand = {
 
           sortedMembers.forEach((member, index) => {
             message += `${index + 1}. ${member.name}\n`;
-            message += `   📱 UID: ${member.id}\n\n`;
+            message += `📱 UID: ${member.id}\n\n`;
           });
-
-          message += `╚═══════════════════════════╝`;
 
           api.sendMessage(message, threadID);
         });
