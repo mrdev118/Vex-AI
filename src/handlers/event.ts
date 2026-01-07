@@ -4,6 +4,8 @@ import { client } from '../client';
 import { logger } from '../utils/logger';
 import { Users } from '../../database/controllers/userController';
 import { Threads } from '../../database/controllers/threadController';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export const handleEvent = async (
   api: IFCAU_API,
@@ -37,19 +39,36 @@ export const handleEvent = async (
       const botAdded = addedParticipants.some((p: any) => p.userFbId === api.getCurrentUserID());
       
       if (botAdded) {
-        // Set bot nickname
-        api.changeNickname("𝗩𝗲𝘅 𝗔𝗜 [ . ]", threadID, api.getCurrentUserID(), (err) => {
-          if (!err) {
-            logger.info(`Bot nickname set to 𝗩𝗲𝘅 𝗔𝗜 in group ${threadID}`);
-          }
-        });
+        // Note: Facebook may not allow bots to change their own nicknames in all groups
+        // Attempting to set bot nickname with delay
+        setTimeout(() => {
+          api.changeNickname("𝗩𝗲𝘅 𝗔𝗜 [ . ]", threadID, api.getCurrentUserID(), (err) => {
+            if (err) {
+              logger.warn(`Could not set bot nickname in group ${threadID} (Facebook restriction):`, err);
+            } else {
+              logger.info(`Bot nickname change requested for group ${threadID} - may require manual approval`);
+            }
+          });
+        }, 3000); // Increased delay to 3 seconds
         
         // Send bot connected message with image
-        const connectedMessage = {
-          body: `✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581`,
-          attachment: require('fs').createReadStream(__dirname + '/../../../attached_assets/connected.gif')
-        };
-        api.sendMessage(connectedMessage, threadID);
+        const connectedPath = path.join(process.cwd(), 'attached_assets/connected.gif');
+        if (fs.existsSync(connectedPath)) {
+          api.sendMessage({
+            body: `✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`,
+            attachment: fs.createReadStream(connectedPath)
+          }, threadID, (err) => {
+            if (err) {
+              logger.error('Error sending connected message:', err);
+            } else {
+              logger.info(`Connected message with GIF sent to group ${threadID}`);
+            }
+          });
+        } else {
+          logger.warn(`Connected image not found at ${connectedPath}`);
+          api.sendMessage(`✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`, threadID);
+        }
+        return; // Exit early after sending bot connected message
       }
       
       const threadData = await Threads.getData(threadID);
@@ -60,42 +79,37 @@ export const handleEvent = async (
         bannedList = [];
       }
 
-      if (bannedList.length > 0) {
-        for (const participant of addedParticipants) {
-          const userFbId = participant.userFbId;
-          if (bannedList.includes(userFbId)) {
-            api.removeUserFromGroup(userFbId, threadID, (err) => {
-              if (!err) {
-                api.sendMessage(`🚫 Auto-kick: User ${participant.fullName} (${userFbId}) is permanently banned from this group.`, threadID);
-                logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
-              }
-            });
-            continue;
-          }
-          // Welcome message for non-banned users (skip if bot was just added)
-          if (!botAdded) {
-            const welcomeMessage = {
-              body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
-              attachment: require('fs').createReadStream(
-                __dirname + '/../../../attached_assets/welcome.jpg'
-              )
-            };
-            api.sendMessage(welcomeMessage, threadID);
-          }
+      // Process each added participant
+      for (const participant of addedParticipants) {
+        const userFbId = participant.userFbId;
+        
+        // Skip if this is the bot itself
+        if (userFbId === api.getCurrentUserID()) {
+          continue;
         }
-      } else {
-        // Welcome message if no ban list
-        for (const participant of addedParticipants) {
-          // Skip if bot was just added
-          if (!botAdded) {
-            const welcomeMessage = {
-              body: `${participant.fullName} was given a second 𝗖𝗵𝗮𝗻𝗰𝗲. Don't waste it.!`,
-              attachment: require('fs').createReadStream(
-                __dirname + '/../../../attached_assets/welcome.jpg'
-              )
-            };
-            api.sendMessage(welcomeMessage, threadID);
-          }
+        
+        // Check if user is banned
+        if (bannedList.includes(userFbId)) {
+          api.removeUserFromGroup(userFbId, threadID, (err) => {
+            if (!err) {
+              api.sendMessage(`🚫 Auto-kick: User ${participant.fullName} (${userFbId}) is permanently banned from this group.`, threadID);
+              logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
+            }
+          });
+          continue;
+        }
+        
+        // Send welcome message for non-banned users
+        const welcomePath = path.join(process.cwd(), 'attached_assets/welcome.jpg');
+        if (fs.existsSync(welcomePath)) {
+          const welcomeMessage = {
+            body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
+            attachment: fs.createReadStream(welcomePath)
+          };
+          api.sendMessage(welcomeMessage, threadID);
+        } else {
+          logger.warn(`Welcome image not found at ${welcomePath}`);
+          api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`, threadID);
         }
       }
     } catch (error) {
@@ -110,13 +124,17 @@ export const handleEvent = async (
     if (leftParticipant) {
       api.getUserInfo(leftParticipant, (err, userInfo) => {
         const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
-        const goodbyeMessage = {
-          body: `${name} has left the group. Good luck on your journey!`,
-          attachment: require('fs').createReadStream(
-            __dirname + '/../../../attached_assets/goodbye.jpeg'
-          )
-        };
-        api.sendMessage(goodbyeMessage, threadID);
+        const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
+        if (fs.existsSync(goodbyePath)) {
+          const goodbyeMessage = {
+            body: `${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
+            attachment: fs.createReadStream(goodbyePath)
+          };
+          api.sendMessage(goodbyeMessage, threadID);
+        } else {
+          logger.warn(`Goodbye image not found at ${goodbyePath}`);
+          api.sendMessage(`${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
+        }
       });
     }
   }

@@ -11,15 +11,8 @@ const command: ICommand = {
     aliases: ["serverip", "address", "serverinfo", "connect", "join"]
   },
 
-  run: async ({ api, event, send }: IRunParams) => {
+  run: async ({ send }: IRunParams) => {
     await send(serverMessage);
-  },
-
-  handleChat: async ({ api, event, send }) => {
-    // Automatically send IP if message contains "ip" (case-insensitive)
-    if (event.body && event.body.toLowerCase().includes("ip")) {
-      await send(serverMessage);
-    }
   }
 };
 

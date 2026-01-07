@@ -22,31 +22,11 @@ const command: ICommand = {
     description: "Get VexonSMP Discord server link",
     category: "Fun",
     hasPrefix: false,
-    aliases: ["dc", "disc", "server"]
+    aliases: ["dc", "disc"]
   },
 
-  run: async ({ api, event, send }: IRunParams) => {
+  run: async ({ send }: IRunParams) => {
     await send(discordMessage);
-  },
-
-  handleChat: async ({ api, event, send }: IChatParams) => {
-    const body = event.body.toLowerCase().trim();
-    
-    // Auto-respond when discord is mentioned
-    const discordTriggers = [
-      /\bdiscord\b/i,
-      /\bdisc\b/i,
-      /\bdc link\b/i,
-      /\bdc server\b/i,
-      /discord\s*link/i,
-      /discord\s*server/i
-    ];
-
-    const shouldRespond = discordTriggers.some(trigger => trigger.test(body));
-
-    if (shouldRespond && body.length < 100) {
-      await send(discordMessage);
-    }
   }
 };
 

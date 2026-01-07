@@ -21,12 +21,20 @@ export const handleNoPrefixCommand = async (
   // Get command by name or alias (but not both to avoid duplicates)
   const command = client.noprefix.get(inCmd);
 
-  if (!command) return;
+  if (!command) {
+    logger.debug(`No noprefix command found for: ${inCmd}`);
+    return;
+  }
+
+  logger.debug(`Found noprefix command: ${command.config.name} for input: ${inCmd}`);
 
   const canNoPrefix = command.config.hasPrefix === false ||
     ownerNoPrefixAllowed(command, botConfig.ownerNoPrefix, isOwnerUser);
 
-  if (!canNoPrefix) return;
+  if (!canNoPrefix) {
+    logger.debug(`Command ${command.config.name} cannot run as noprefix`);
+    return;
+  }
 
   try {
     const permCheck = await checkCommandPermission(api, command, event, {
