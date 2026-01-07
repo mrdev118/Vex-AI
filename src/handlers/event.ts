@@ -28,8 +28,10 @@ export const handleEvent = async (
   }
 
   // Auto-kick logic for banned users
-  if (event.type === 'log:subscribe' && event.isGroup) {
-    const { addedParticipants, threadID } = event;
+  if (event.type === "event" && event.logMessageType === 'log:subscribe') {
+    const threadID = event.threadID;
+    const addedParticipants = (event as any).logMessageData?.addedParticipants || [];
+    
     try {
       const threadData = await Threads.getData(threadID);
       let bannedList: string[] = [];
@@ -41,11 +43,12 @@ export const handleEvent = async (
 
       if (bannedList.length > 0) {
         for (const participant of addedParticipants) {
-          if (bannedList.includes(participant.userFbId)) {
-            api.removeUserFromGroup(participant.userFbId, threadID, (err) => {
+          const userFbId = participant.userFbId;
+          if (bannedList.includes(userFbId)) {
+            api.removeUserFromGroup(userFbId, threadID, (err) => {
               if (!err) {
-                api.sendMessage(`🚫 Auto-kick: User ${participant.fullName} (${participant.userFbId}) is permanently banned from this group.`, threadID);
-                logger.info(`Auto-kicked banned user ${participant.userFbId} from group ${threadID}`);
+                api.sendMessage(`🚫 Auto-kick: User ${participant.fullName} (${userFbId}) is permanently banned from this group.`, threadID);
+                logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
               }
             });
           }
