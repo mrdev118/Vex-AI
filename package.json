@@ -18,7 +18,7 @@
   "author": "DongDev",
   "license": "MIT",
   "dependencies": {
-    "@dongdev/fca-unofficial": "^3.0.21",
+    "@dongdev/fca-unofficial": "^3.0.22",
     "express": "^5.2.1",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7"
