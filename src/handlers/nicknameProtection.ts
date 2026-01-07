@@ -69,7 +69,30 @@ export const handleNicknameProtection = async (
     }
   }
 
-  // Feature 2: Prevent members from changing other people's nicknames
+  // Feature 2: Protect group chat photo - only admins can change it
+  if (event.logMessageType === 'log:thread-icon') {
+    try {
+      // Check if the author is a group admin
+      const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+      
+      if (!isAuthorAdmin) {
+        // Non-admin tried to change the group photo
+        const changeKey = `thread-icon-${threadID}`;
+        
+        if (canMakeChange(changeKey)) {
+          logger.info(`Group photo change detected by non-admin in ${threadID}`);
+          api.sendMessage(
+            `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\nOnly group admins can change the group photo.\n\n━━━━━━━━━━━━━━━━━━━━`,
+            threadID
+          );
+        }
+      }
+    } catch (error) {
+      logger.error('Error in group photo protection:', error);
+    }
+  }
+
+  // Feature 3: Prevent members from changing other people's nicknames
   if (event.logMessageType === 'log:user-nickname') {
     try {
       const logData = (event as any).logMessageData;
