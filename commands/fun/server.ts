@@ -71,7 +71,7 @@ const command: ICommand = {
     description: "Check VexonSMP Minecraft server status",
     category: "Fun",
     usages: "server",
-    aliases: ["status", "online"]
+    aliases: ["status", "online", "list", "players", "playerlist"]
   },
 
   run: async ({ api, event, send }: IRunParams): Promise<void> => {
