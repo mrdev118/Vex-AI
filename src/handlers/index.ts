@@ -7,6 +7,7 @@ import { handleAnyEvent } from './anyEvent';
 import { handleChat } from './chat';
 import { handleCommand } from './command';
 import { handleEvent, onEvent } from './event';
+import { handleNicknameProtection } from './nicknameProtection';
 import { presence } from './presence';
 import { handleReaction } from './reaction';
 import { read_receipt } from './readReceipt';
@@ -66,6 +67,7 @@ export const handleEventMain = async (
 
     case "event": {
       const threadEvent = event as ThreadEventType;
+      await handleNicknameProtection(api, threadEvent);
       await hooks.executeHandlerEvent(api, threadEvent);
       await handleEvent(api, threadEvent);
       await hooks.executeOnEvent(api, threadEvent);

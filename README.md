@@ -11,6 +11,7 @@ AURABOT is a Facebook Chat Bot built with TypeScript, featuring a flexible and e
 - 🛡️ **Permission System**: Permission system for owners and admins.
 - ⚡ **Hot Reload**: Supports loading/unloading commands without restarting the bot.
 - 🎨 **Event Handlers**: Handles multiple event types (message, reaction, typing, presence, etc.).
+- 🔒 **Nickname Protection**: Automatic protection of group name and member nicknames.
 
 ## 📋 Requirements
 
@@ -302,6 +303,25 @@ The bot uses SQLite with Sequelize ORM. The database is automatically created up
 
 * **User**: Stores user information (money, exp, etc.)
 * **Thread**: Stores chat group information
+
+## 🔒 Nickname Protection System
+
+The bot includes an automatic nickname protection system with two features:
+
+### 1. Group Name Protection
+- **Protected Name**: `𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 | Season 1 | Bedrock Only`
+- Only group admins can change the group name
+- If a regular member tries to change it, the bot automatically restores the protected name
+- The bot sends a warning message to the group
+
+### 2. Nickname Change Protection
+- Members can only change their own nickname
+- Members cannot change other people's nicknames
+- If a member tries to change someone else's nickname, the bot automatically reverts it
+- Only group admins can change other members' nicknames
+- The bot sends a warning message when unauthorized changes are detected
+
+**Note**: The protection system includes a 3-second cooldown to prevent loops and ensure smooth operation.
 
 ## 🔐 Permissions
 
