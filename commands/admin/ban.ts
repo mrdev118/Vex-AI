@@ -59,12 +59,13 @@ const command: ICommand = {
         }
 
         try {
-            // Update banned list in DB first
+            // Safely parse existing banned list
             const threadData = await Threads.getData(event.threadID);
             let bannedList: string[] = [];
             try {
-                bannedList = JSON.parse(threadData.bannedUsers || "[]");
-            } catch (e) {
+                const parsed = JSON.parse(threadData.bannedUsers || "[]");
+                bannedList = Array.isArray(parsed) ? parsed.map((id: any) => String(id)) : [];
+            } catch {
                 bannedList = [];
             }
 
@@ -73,22 +74,31 @@ const command: ICommand = {
                 return;
             }
 
+            // Attempt to remove the user first; only persist ban on success
+            const removalError = await new Promise<Error | null>((resolve) => {
+                api.removeUserFromGroup(targetID, event.threadID, (err?: Error) => {
+                    resolve(err || null);
+                });
+            });
+
+            if (removalError) {
+                const message = (removalError as any).message || String(removalError);
+                await send(`❌ Error removing user: ${message}\n(No changes were made to the ban list)`);
+                return;
+            }
+
             bannedList.push(targetID);
             threadData.bannedUsers = JSON.stringify(bannedList);
             await threadData.save();
 
-            // Now remove the user from group
-            api.removeUserFromGroup(targetID, event.threadID, async (err?: Error) => {
-                if (err) {
-                    await send(`❌ Error removing user: ${err.message}\n(User is still added to ban list)`);
-                } else {
-                    // Get user info for better message
-                    api.getUserInfo(targetID, async (infoErr, userInfo) => {
-                        const userName = userInfo && userInfo[targetID] ? userInfo[targetID].name : targetID;
-                        await send(`✅ Successfully banned ${userName} (${targetID}) from the group permanently!`);
-                    });
-                }
+            const userName = await new Promise<string>((resolve) => {
+                api.getUserInfo(targetID, (_infoErr, userInfo) => {
+                    const name = userInfo && userInfo[targetID] ? userInfo[targetID].name : targetID;
+                    resolve(name);
+                });
             });
+
+            await send(`✅ Successfully banned ${userName} (${targetID}) from the group permanently!`);
         } catch (error: any) {
             await send(`❌ An error occurred while banning user: ${error.message || error}`);
         }
