@@ -9,9 +9,9 @@ const command: ICommand = {
     name: "ai",
     version: "1.0.0",
     author:"Hyun Su",
-    description: "Chat with Gemini AI - supports text and image recognition",
+    description: "Chat with Gemini AI (text + image understanding)",
     category: "AI",
-    usages: ".ai <message> or reply to an image with .gemini <question>",
+    usages: ".ai <message> — ask anything, or reply to an image with .ai <question> (e.g., .ai what is this)",
     aliases: ["gemini", "gpt"]
   },
 
@@ -21,7 +21,7 @@ const command: ICommand = {
     const eventWithReply = event as any;
 
     if (args.length === 0 && !eventWithReply.messageReply) {
-      await send("Please provide a message or reply to an image/message!\n\nUsage:\n• .gemini <your message>\n• Reply to an image: .gemini describe this\n• Continue conversation: .gemini <follow-up question>");
+      await send("Please provide a message or reply to an image/message!\n\nUsage:\n• .ai <your message>\n• Reply to an image: .ai what is this\n• Continue conversation: .ai <follow-up question>");
       return;
     }
 
