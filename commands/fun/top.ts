@@ -6,7 +6,7 @@ const command: ICommand = {
     name: "top",
     version: "1.0.0",
     author: "Donix",
-    description: "Xem top người chơi (tiền hoặc EXP)",
+    description: "View top players by money or EXP",
     category: "Fun"
   },
 
@@ -25,11 +25,11 @@ const command: ICommand = {
         title = "🏆 TOP EXP";
       } else {
         topUsers = await Users.getTopMoney(limit);
-        title = "🏆 TOP TIỀN";
+        title = "🏆 TOP MONEY";
       }
 
       if (topUsers.length === 0) {
-        api.sendMessage("📭 Chưa có dữ liệu!", threadID);
+        api.sendMessage("📭 No data available yet!", threadID);
         return;
       }
 
@@ -37,15 +37,15 @@ const command: ICommand = {
 
       topUsers.forEach((user, index) => {
         const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`;
-        const value = type === "exp" ? user.exp : user.money;
-        const unit = type === "exp" ? " EXP" : "$";
+        const value = type === "exp" ? user.exp.toLocaleString() : user.money.toLocaleString();
+        const unit = type === "exp" ? " EXP" : " $";
 
         message += `${medal} ${user.name}: ${value}${unit}\n`;
       });
 
       api.sendMessage(message.trim(), threadID);
     } catch (error) {
-      api.sendMessage("❌ Có lỗi xảy ra khi lấy top!", threadID);
+      api.sendMessage("❌ An error occurred while fetching the leaderboard!", threadID);
     }
   }
 };

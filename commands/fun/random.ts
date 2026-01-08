@@ -5,14 +5,14 @@ const command: ICommand = {
         name: "random",
         version: "1.0.0",
         author: "Donix",
-        description: "Chọn ngẫu nhiên từ danh sách",
+        description: "Pick a random item from a list",
         category: "Fun",
         usages: "!random item1, item2, item3"
     },
 
     run: async ({ api, event, args }: IRunParams) => {
         if (args.length === 0) {
-            api.sendMessage("Vui lòng nhập danh sách! Ví dụ: !random A, B, C", event.threadID);
+            api.sendMessage("Please provide a list! Example: !random A, B, C", event.threadID);
             return;
         }
 
@@ -20,12 +20,12 @@ const command: ICommand = {
         const items = input.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
         if (items.length === 0) {
-            api.sendMessage("❌ Danh sách không hợp lệ!", event.threadID);
+            api.sendMessage("❌ That list is not valid!", event.threadID);
             return;
         }
 
         const randomItem = items[Math.floor(Math.random() * items.length)];
-        api.sendMessage(`🎲 Kết quả: ${randomItem}`, event.threadID);
+        api.sendMessage(`🎲 Result: ${randomItem}`, event.threadID);
     }
 };
 

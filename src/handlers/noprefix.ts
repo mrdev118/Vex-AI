@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 import { createMessageHelper } from '../utils/message';
 import { hasPermission } from '../utils/permissions';
 import { checkCommandPermission, ownerNoPrefixAllowed } from '../utils/permissionsExtended';
+import { checkFunCooldown, getFunCooldownMs } from '../utils/cooldown';
 
 export const handleNoPrefixCommand = async (
   api: IFCAU_API,
@@ -37,6 +38,18 @@ export const handleNoPrefixCommand = async (
   }
 
   try {
+    const isFunCategory = (command.config.category || '').toLowerCase() === 'fun';
+    if (isFunCategory && !isOwnerUser) {
+      const cooldownCheck = checkFunCooldown(event.senderID);
+      if (!cooldownCheck.allowed) {
+        const messageHelper = createMessageHelper(api, event);
+        await messageHelper.send(
+          `⏳ Fun commands have a ${getFunCooldownMs() / 1000}s cooldown. Please wait ${Math.ceil(cooldownCheck.waitMs / 1000)}s.`
+        );
+        return;
+      }
+    }
+
     const permCheck = await checkCommandPermission(api, command, event, {
       adminOnly: botConfig.adminOnly,
       adminBox: botConfig.adminBox,

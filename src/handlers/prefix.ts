@@ -1,7 +1,7 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import { MessageEventType } from '../../types';
 import { client } from '../client';
-import { PREFIX, botConfig, DISABLED_COMMANDS } from '../config';
+import { PREFIX, botConfig, DISABLED_COMMANDS, isOwner } from '../config';
 import { logger } from '../utils/logger';
 import { Users } from '../../database/controllers/userController';
 import { Threads } from '../../database/controllers/threadController';
@@ -9,6 +9,7 @@ import { createMessageHelper } from '../utils/message';
 import { hasPermission } from '../utils/permissions';
 import { checkCommandPermission } from '../utils/permissionsExtended';
 import { createMessageHelper as createHelper } from '../utils/message';
+import { checkFunCooldown, getFunCooldownMs } from '../utils/cooldown';
 
 export const handlePrefixCommand = async (
   api: IFCAU_API,
@@ -26,6 +27,18 @@ export const handlePrefixCommand = async (
 
   if (command) {
     try {
+      const isFunCategory = (command.config.category || '').toLowerCase() === 'fun';
+      if (isFunCategory && !isOwner(event.senderID)) {
+        const cooldownCheck = checkFunCooldown(event.senderID);
+        if (!cooldownCheck.allowed) {
+          const messageHelper = createHelper(api, event);
+          await messageHelper.send(
+            `⏳ Fun commands have a ${getFunCooldownMs() / 1000}s cooldown. Please wait ${Math.ceil(cooldownCheck.waitMs / 1000)}s.`
+          );
+          return true;
+        }
+      }
+
       const permCheck = await checkCommandPermission(api, command, event, {
         adminOnly: botConfig.adminOnly,
         adminBox: botConfig.adminBox,

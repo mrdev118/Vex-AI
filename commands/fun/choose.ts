@@ -6,14 +6,14 @@ const command: ICommand = {
     name: "choose",
     version: "1.0.0",
     author: "Donix",
-    description: "Test handle reply và reaction",
+    description: "Example for handling replies and reactions",
     hasPrefix: true,
     category: "Fun"
   },
 
   run: async ({ api, event }: IRunParams) => {
     api.sendMessage(
-      "🔴 Bạn chọn Phe Đỏ (Reply tin nhắn này: 'red')\n🔵 Hay Phe Xanh (Thả tim vào tin nhắn này)?",
+      "🔴 Choose Team Red (reply to this message with 'red')\n🔵 Or Team Blue (react to this message with a heart)?",
       event.threadID,
       (err, info) => {
         if (err) return;
@@ -41,17 +41,17 @@ const command: ICommand = {
     if (!handleReply) return;
 
     if (event.senderID !== handleReply.author) {
-      api.sendMessage("Không phải lượt của bạn nha!", event.threadID);
+      api.sendMessage("It's not your turn for this choice!", event.threadID);
       return;
     }
 
     const answer = (event as any).body?.toLowerCase() || "";
     if (answer === "red") {
-      api.sendMessage("🔥 Chào mừng bạn đến với Phe Đỏ hung hãn!", event.threadID);
+      api.sendMessage("🔥 Welcome to the fierce Team Red!", event.threadID);
 
       client.handleReplies.delete(handleReply.messageID);
     } else {
-      api.sendMessage("Sai cú pháp rồi! Gõ 'red' đi.", event.threadID);
+      api.sendMessage("That input doesn't work here—type 'red'.", event.threadID);
     }
   },
 
@@ -60,7 +60,7 @@ const command: ICommand = {
 
     const reaction = (event as any).reaction;
     if (reaction === "❤" || reaction === "❤️") {
-      api.sendMessage("🌊 Chào mừng bạn đến với Phe Xanh hòa bình!", event.threadID);
+      api.sendMessage("🌊 Welcome to the chill Team Blue!", event.threadID);
       client.handleReactions.delete(handleReaction.messageID);
     }
   }

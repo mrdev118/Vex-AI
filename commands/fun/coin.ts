@@ -5,14 +5,14 @@ const command: ICommand = {
         name: "coin",
         version: "1.0.0",
         author: "Donix",
-        description: "Tung đồng xu",
+        description: "Flip a coin",
         category: "Fun"
     },
 
     run: async ({ api, event }: IRunParams) => {
-        const result = Math.random() < 0.5 ? "Ngửa" : "Sấp";
-        const emoji = result === "Ngửa" ? "🪙" : "🪙";
-        api.sendMessage(`${emoji} Kết quả: ${result}`, event.threadID);
+        const result = Math.random() < 0.5 ? "Heads" : "Tails";
+        const emoji = "🪙";
+        api.sendMessage(`${emoji} Result: ${result}`, event.threadID);
     }
 };
 
