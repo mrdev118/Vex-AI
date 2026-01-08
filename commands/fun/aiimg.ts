@@ -2,10 +2,8 @@ import axios from 'axios';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { EXTERNAL_API_KEY, EXTERNAL_API_URL } from '../../src/config';
 import { ICommand, IRunParams } from '../../types';
-
-const PUTER_TXT2IMG_URL = 'https://api.puter.com/v2/ai/txt2img';
-const IMAGE_MODEL = 'gemini-2.5-flash-image-preview';
 
 const saveTempImage = (base64Data: string): string => {
   const buffer = Buffer.from(base64Data, 'base64');
@@ -14,32 +12,12 @@ const saveTempImage = (base64Data: string): string => {
   return tmpFile;
 };
 
-const extractBase64 = (data: any): string | null => {
-  if (!data) return null;
-  if (typeof data === 'string') {
-    // Accept data URLs or plain base64 strings
-    if (data.startsWith('data:image')) {
-      const comma = data.indexOf(',');
-      return comma >= 0 ? data.slice(comma + 1) : null;
-    }
-    return data;
-  }
-
-  return (
-    data.image ||
-    (Array.isArray(data.images) && data.images[0]) ||
-    data.result?.image ||
-    data.output ||
-    null
-  );
-};
-
 const command: ICommand = {
   config: {
     name: 'aiimg',
-    version: '1.0.0',
+    version: '2.0.0',
     author: 'Vex Team',
-    description: 'Generate an image using Puter AI (Gemini)',
+    description: 'Generate an image using backend AI',
     category: 'AI',
     usages: '.aiimg <prompt>',
     aliases: ['imagine', 'nano']
@@ -47,6 +25,11 @@ const command: ICommand = {
 
   run: async ({ api, event, args, send }: IRunParams) => {
     const threadID = event.threadID;
+
+    if (!EXTERNAL_API_URL || !EXTERNAL_API_KEY) {
+      await send('❌ External API is not configured. Please set externalApi.url and externalApi.key in config.json.');
+      return;
+    }
 
     const prompt = args.join(' ').trim();
     if (!prompt) {
@@ -57,25 +40,27 @@ const command: ICommand = {
     try {
       await api.sendTypingIndicator(threadID);
 
-      const payload = {
-        model: IMAGE_MODEL,
-        prompt
-      };
+      const response = await axios.post(
+        `${EXTERNAL_API_URL}/api/v1/vdgai`,
+        { prompt },
+        {
+          headers: {
+            'X-API-Key': EXTERNAL_API_KEY,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Content-Type': 'application/json'
+          },
+          timeout: 120000,
+          responseType: 'arraybuffer'
+        }
+      );
 
-      const response = await axios.post(PUTER_TXT2IMG_URL, payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 120000
-      });
-
-      const base64 = extractBase64(response.data);
-      if (!base64) {
+      const buffer = Buffer.from(response.data);
+      if (!buffer || buffer.length === 0) {
         await send('❌ Could not decode image from AI response.');
         return;
       }
 
-      const filePath = saveTempImage(base64.replace(/^data:image\/[^;]+;base64,/, ''));
+      const filePath = saveTempImage(buffer.toString('base64'));
 
       await api.sendMessage(
         {
@@ -94,7 +79,7 @@ const command: ICommand = {
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 401) {
-        await send('❌ Unauthorized: Puter AI rejected the request.');
+        await send('❌ Unauthorized: External AI rejected the request.');
       } else if (status === 429) {
         await send('⚠️ Rate limit reached. Please wait and try again.');
       } else if (error.code === 'ECONNABORTED') {

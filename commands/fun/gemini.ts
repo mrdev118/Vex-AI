@@ -1,11 +1,15 @@
 import axios from 'axios';
+import { GoogleGenAI } from '@google/genai';
+import { EXTERNAL_API_KEY } from '../../src/config';
 import { ICommand, IRunParams } from '../../types';
 
-const PUTER_CHAT_URL = 'https://api.puter.com/v2/ai/chat';
-const DEFAULT_MODEL = 'gemini-3-pro-preview';
-const IMAGE_MODEL = 'gemini-3-flash-preview';
+// Preserve short conversation history per thread for better context.
+const conversationHistory = new Map<string, any[]>();
 
-const fetchImageDataUrl = async (url: string, mime: string = 'image/jpeg'): Promise<string> => {
+const GEMINI_MODEL = 'gemini-3-pro-preview';
+const IMAGE_MIME_TYPE = 'image/jpeg';
+
+const fetchImageBase64 = async (url: string): Promise<string> => {
   const response = await axios.get(url, {
     responseType: 'arraybuffer',
     headers: {
@@ -14,16 +18,39 @@ const fetchImageDataUrl = async (url: string, mime: string = 'image/jpeg'): Prom
     timeout: 30000
   });
 
-  const base64 = Buffer.from(response.data, 'binary').toString('base64');
-  return `data:${mime};base64,${base64}`;
+  return Buffer.from(response.data, 'binary').toString('base64');
+};
+
+const extractResponseText = (result: any): string | null => {
+  if (!result) return null;
+
+  const textField = result.text || result?.response?.text;
+  const textFromField = typeof textField === 'function' ? textField() : textField;
+  if (typeof textFromField === 'string' && textFromField.trim()) {
+    return textFromField.trim();
+  }
+
+  const candidates = result?.response?.candidates || result?.candidates || [];
+  for (const candidate of candidates) {
+    const parts = candidate?.content?.parts;
+    if (Array.isArray(parts)) {
+      const combined = parts
+        .map((part: any) => part?.text || '')
+        .join('')
+        .trim();
+      if (combined) return combined;
+    }
+  }
+
+  return null;
 };
 
 const command: ICommand = {
   config: {
     name: 'ai',
-    version: '3.0.0',
+    version: '4.0.0',
     author: 'Vex Team',
-    description: 'Chat with Gemini via Puter AI (text + image)',
+    description: 'Chat with Gemini (text + image)',
     category: 'AI',
     usages: '.ai <message> | reply to an image with .ai what is this',
     aliases: ['gemini', 'gpt']
@@ -33,6 +60,12 @@ const command: ICommand = {
     const threadID = event.threadID;
     const messageID = event.messageID;
     const replyMsg = (event as any).messageReply as any | undefined;
+    const apiKey = process.env.GEMINI_API_KEY || EXTERNAL_API_KEY;
+
+    if (!apiKey) {
+      await send('❌ Gemini API key is missing. Set GEMINI_API_KEY env var or externalApi.key in config.json.');
+      return;
+    }
 
     const hasArgs = args.length > 0;
     if (!hasArgs && !replyMsg) {
@@ -41,12 +74,13 @@ const command: ICommand = {
     }
 
     let userMessage = args.join(' ').trim();
-    let imageUrl: string | null = null;
+    let imageBase64: string | null = null;
+    let history = conversationHistory.get(threadID) || [];
 
     if (replyMsg && replyMsg.attachments && replyMsg.attachments.length > 0) {
       const img = replyMsg.attachments.find((a: any) => a.type === 'photo');
       if (img?.url) {
-        imageUrl = img.url;
+        imageBase64 = await fetchImageBase64(img.url);
         if (!userMessage) {
           userMessage = 'What do you see in this image?';
         }
@@ -66,55 +100,44 @@ const command: ICommand = {
     try {
       await api.sendTypingIndicator(threadID);
 
-      const model = imageUrl ? IMAGE_MODEL : DEFAULT_MODEL;
-      const payload: Record<string, unknown> = {
-        model,
-        messages: [
-          {
-            role: 'user',
-            content: userMessage
-          }
-        ]
-      };
+      const client = new GoogleGenAI({ apiKey });
 
-      if (imageUrl) {
-        const dataUrl = await fetchImageDataUrl(imageUrl);
-        payload.image = dataUrl;
-        payload.images = [dataUrl];
-      }
+      const contents = [
+        ...history,
+        {
+          role: 'user',
+          parts: [
+            { text: userMessage },
+            ...(imageBase64
+              ? [{ inlineData: { data: imageBase64, mimeType: IMAGE_MIME_TYPE } }]
+              : [])
+          ]
+        }
+      ];
 
-      const response = await axios.post(PUTER_CHAT_URL, payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 60000
+      const response = await client.models.generateContent({
+        model: GEMINI_MODEL,
+        contents
       });
 
-      const botReply =
-        response.data?.message?.content ||
-        response.data?.choices?.[0]?.message?.content ||
-        response.data?.response ||
-        response.data?.output ||
-        (typeof response.data === 'string' ? response.data : null);
+      const botReply = extractResponseText(response);
 
       if (!botReply) {
         await send('❌ The AI returned an empty response. Please try again.');
         return;
       }
 
+      history.push({ role: 'user', parts: [{ text: userMessage }] });
+      history.push({ role: 'model', parts: [{ text: botReply }] });
+      if (history.length > 20) {
+        history = history.slice(-20);
+      }
+      conversationHistory.set(threadID, history);
+
       await send(`🤖 ${botReply}`, messageID);
     } catch (error: any) {
-      const status = error?.response?.status;
-      if (status === 401) {
-        await send('❌ Unauthorized: Puter AI rejected the request.');
-      } else if (status === 429) {
-        await send('⚠️ Rate limit reached. Please wait and try again.');
-      } else if (error.code === 'ECONNABORTED') {
-        await send('⏱️ Request timed out. Please try again.');
-      } else {
-        const detail = error?.response?.data?.error || error?.message || 'Unknown error';
-        await send(`❌ AI error: ${detail}`);
-      }
+      const detail = error?.response?.data?.error || error?.message || 'Unknown error';
+      await send(`❌ AI error: ${detail}`);
     }
   }
 };
