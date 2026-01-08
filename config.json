@@ -11,7 +11,12 @@
     "forceLogin": true,
     "listenEvents": true,
     "logLevel": "error",
-    "selfListen": false
+    "selfListen": false,
+    "autoMarkRead": false,
+    "autoMarkDelivered": false,
+    "listenTyping": false,
+    "updatePresence": false,
+    "online": true
   },
   "externalApi": {
     "url": "https://minhdong.site",
