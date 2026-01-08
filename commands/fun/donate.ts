@@ -57,6 +57,12 @@ const command: ICommand = {
 
     const messageHelper = createMessageHelper(api, event);
     await messageHelper.send(donateMessage);
+  },
+
+  // Also allow explicit command use (.donate if enabled)
+  run: async ({ api, event }) => {
+    const messageHelper = createMessageHelper(api, event);
+    await messageHelper.send(donateMessage);
   }
 };
 
