@@ -1,182 +1,119 @@
 import axios from 'axios';
-import { ICommand, IRunParams, IChatParams } from '../../types';
-import { EXTERNAL_API_URL, EXTERNAL_API_KEY } from '../../src/config';
+import { ICommand, IRunParams } from '../../types';
 
-const conversationHistory = new Map<string, any[]>();
+const PUTER_CHAT_URL = 'https://api.puter.com/v2/ai/chat';
+const DEFAULT_MODEL = 'gemini-3-pro-preview';
+const IMAGE_MODEL = 'gemini-3-flash-preview';
+
+const fetchImageDataUrl = async (url: string, mime: string = 'image/jpeg'): Promise<string> => {
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    timeout: 30000
+  });
+
+  const base64 = Buffer.from(response.data, 'binary').toString('base64');
+  return `data:${mime};base64,${base64}`;
+};
 
 const command: ICommand = {
   config: {
-    name: "ai",
-    version: "1.0.0",
-    author:"Hyun Su",
-    description: "Chat with Gemini AI (text + image understanding)",
-    category: "AI",
-    usages: ".ai <message> — ask anything, or reply to an image with .ai <question> (e.g., .ai what is this)",
-    aliases: ["gemini", "gpt"]
+    name: 'ai',
+    version: '3.0.0',
+    author: 'Vex Team',
+    description: 'Chat with Gemini via Puter AI (text + image)',
+    category: 'AI',
+    usages: '.ai <message> | reply to an image with .ai what is this',
+    aliases: ['gemini', 'gpt']
   },
 
   run: async ({ api, event, args, send }: IRunParams) => {
     const threadID = event.threadID;
     const messageID = event.messageID;
-    const eventWithReply = event as any;
+    const replyMsg = (event as any).messageReply as any | undefined;
 
-    if (args.length === 0 && !eventWithReply.messageReply) {
-      await send("Please provide a message or reply to an image/message!\n\nUsage:\n• .ai <your message>\n• Reply to an image: .ai what is this\n• Continue conversation: .ai <follow-up question>");
+    const hasArgs = args.length > 0;
+    if (!hasArgs && !replyMsg) {
+      await send('Usage:\n• .ai <your message>\n• Reply to text: .ai summarize this\n• Reply to an image: .ai what is this');
+      return;
+    }
+
+    let userMessage = args.join(' ').trim();
+    let imageUrl: string | null = null;
+
+    if (replyMsg && replyMsg.attachments && replyMsg.attachments.length > 0) {
+      const img = replyMsg.attachments.find((a: any) => a.type === 'photo');
+      if (img?.url) {
+        imageUrl = img.url;
+        if (!userMessage) {
+          userMessage = 'What do you see in this image?';
+        }
+      }
+    }
+
+    if (replyMsg && replyMsg.body) {
+      const base = userMessage || 'Please answer based on the replied message.';
+      userMessage = `Context: "${replyMsg.body}"\n\nQuestion: ${base}`;
+    }
+
+    if (!userMessage) {
+      await send('❌ Please provide a message to send to the AI.');
       return;
     }
 
     try {
       await api.sendTypingIndicator(threadID);
 
-      let userMessage = args.join(' ');
-      let imageData: string | null = null;
-      let history = conversationHistory.get(threadID) || [];
-
-      // Handle message reply (for images or continuing conversation)
-      if (eventWithReply.messageReply) {
-        const replyMessage = eventWithReply.messageReply;
-        
-        // Check if reply contains an image
-        if (replyMessage.attachments && replyMessage.attachments.length > 0) {
-          const attachment = replyMessage.attachments[0];
-          
-          if (attachment.type === 'photo') {
-            try {
-              // Download image
-              const imageUrl = attachment.url;
-              const response = await axios.get(imageUrl, { 
-                responseType: 'arraybuffer',
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                }
-              });
-              
-              // Convert to base64
-              imageData = Buffer.from(response.data, 'binary').toString('base64');
-              
-              if (!userMessage) {
-                userMessage = "What's in this image?";
-              }
-            } catch (error) {
-              await send("❌ Failed to process the image. Please try again.");
-              return;
-            }
+      const model = imageUrl ? IMAGE_MODEL : DEFAULT_MODEL;
+      const payload: Record<string, unknown> = {
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: userMessage
           }
-        } else if (replyMessage.body) {
-          // If replying to a text message, add context
-          userMessage = `Context: "${replyMessage.body}"\n\nQuestion: ${userMessage}`;
-        }
-      }
-
-      // Prepare request data
-      const requestData: any = {
-        message: userMessage,
-        history: history
+        ]
       };
 
-      if (imageData) {
-        requestData.image = imageData;
+      if (imageUrl) {
+        const dataUrl = await fetchImageDataUrl(imageUrl);
+        payload.image = dataUrl;
+        payload.images = [dataUrl];
       }
 
-      // Make API request
-      const apiResponse = await axios.post(
-        `${EXTERNAL_API_URL}/api/v1/gemini/chat`,
-        requestData,
-        {
-          headers: {
-            'X-API-Key': EXTERNAL_API_KEY,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Content-Type': 'application/json'
-          },
-          timeout: 60000
-        }
-      );
+      const response = await axios.post(PUTER_CHAT_URL, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000
+      });
 
-      if (apiResponse.data && apiResponse.data.response) {
-        const geminiResponse = apiResponse.data.response;
-        
-        // Update conversation history
-        history.push({
-          role: 'user',
-          parts: [{ text: userMessage }]
-        });
-        history.push({
-          role: 'model',
-          parts: [{ text: geminiResponse }]
-        });
+      const botReply =
+        response.data?.message?.content ||
+        response.data?.choices?.[0]?.message?.content ||
+        response.data?.response ||
+        response.data?.output ||
+        (typeof response.data === 'string' ? response.data : null);
 
-        // Keep only last 10 exchanges (20 messages)
-        if (history.length > 20) {
-          history = history.slice(-20);
-        }
-        conversationHistory.set(threadID, history);
-
-        await send(`🤖 Gemini AI:\n\n${geminiResponse}`, messageID);
-      } else {
-        await send("❌ Received an invalid response from Gemini AI. Please try again.");
+      if (!botReply) {
+        await send('❌ The AI returned an empty response. Please try again.');
+        return;
       }
 
+      await send(`🤖 ${botReply}`, messageID);
     } catch (error: any) {
-      console.error('Gemini API Error:', error.response?.data || error.message);
-      
-      if (error.response?.status === 401) {
-        await send("❌ API authentication failed. Please check the API key.");
-      } else if (error.response?.status === 429) {
-        await send("⚠️ Rate limit reached. Please wait a moment and try again.");
+      const status = error?.response?.status;
+      if (status === 401) {
+        await send('❌ Unauthorized: Puter AI rejected the request.');
+      } else if (status === 429) {
+        await send('⚠️ Rate limit reached. Please wait and try again.');
       } else if (error.code === 'ECONNABORTED') {
-        await send("⏱️ Request timeout. The AI is taking too long to respond. Please try again.");
+        await send('⏱️ Request timed out. Please try again.');
       } else {
-        await send(`❌ Error: ${error.response?.data?.error || error.message || 'Failed to communicate with Gemini AI'}`);
-      }
-    }
-  },
-
-  handleChat: async ({ api, event, send }: IChatParams) => {
-    if (!event.body) return;
-    const body = event.body.toLowerCase().trim();
-    const threadID = event.threadID;
-
-    // Auto-respond when someone mentions "gemini" or asks AI-related questions
-    const geminiTriggers = [
-      /\bgemini\b/i,
-      /\bai what\b/i,
-      /\bai can you\b/i,
-      /\bai help\b/i
-    ];
-
-    const shouldRespond = geminiTriggers.some(trigger => trigger.test(body));
-
-    if (shouldRespond && body.length > 10 && body.length < 200) {
-      try {
-        await api.sendTypingIndicator(threadID);
-        
-        const history = conversationHistory.get(threadID) || [];
-        
-        const requestData = {
-          message: event.body,
-          history: history
-        };
-
-        const apiResponse = await axios.post(
-          `${EXTERNAL_API_URL}/api/v1/gemini/chat`,
-          requestData,
-          {
-            headers: {
-              'X-API-Key': EXTERNAL_API_KEY,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Content-Type': 'application/json'
-            },
-            timeout: 60000
-          }
-        );
-
-        if (apiResponse.data && apiResponse.data.response) {
-          const geminiResponse = apiResponse.data.response;
-          await send(`🤖 ${geminiResponse}`);
-        }
-      } catch (error) {
-        // Silently fail for auto-responses
-        console.error('Gemini auto-response error:', error);
+        const detail = error?.response?.data?.error || error?.message || 'Unknown error';
+        await send(`❌ AI error: ${detail}`);
       }
     }
   }

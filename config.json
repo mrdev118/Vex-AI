@@ -23,7 +23,6 @@
     "key": "donix_b507bb009f56b5769bc84f420a96474c"
   },
   "disabledCommands": [
-    "ai",
     "vdgai"
   ],
   "logger": {
