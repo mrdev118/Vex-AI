@@ -5,9 +5,59 @@ import { isGroupAdmin } from '../utils/permissions';
 
 const PROTECTED_GROUP_NAME = '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 | Season 1 | Bedrock Only';
 
+// Tracks the last known nickname per thread/user so we can restore it after blocked changes
+const nicknameCache = new Map<string, Map<string, string>>();
+
 // Cache to track recent nickname changes to prevent loops
 const recentChanges = new Map<string, number>();
 const CHANGE_COOLDOWN = 3000; // 3 seconds cooldown
+
+// Fetch thread nicknames once per thread so we have a baseline to restore
+const ensureThreadNicknamesCached = async (
+  api: IFCAU_API,
+  threadID: string,
+  forceRefresh = false
+): Promise<void> => {
+  if (!forceRefresh && nicknameCache.has(threadID)) return;
+
+  await new Promise<void>((resolve) => {
+    api.getThreadInfo(threadID, (err, threadInfo) => {
+      if (!err && threadInfo?.nicknames) {
+        const map = new Map<string, string>();
+        Object.entries(threadInfo.nicknames).forEach(([id, nickname]) => {
+          map.set(id, nickname || '');
+        });
+        nicknameCache.set(threadID, map);
+      } else {
+        // Keep an empty cache entry so we do not refetch on every call
+        nicknameCache.set(threadID, new Map());
+        if (err) {
+          logger.debug(`Failed to warm nickname cache for ${threadID}:`, err);
+        }
+      }
+      resolve();
+    });
+  });
+};
+
+export const warmNicknameCache = async (
+  api: IFCAU_API,
+  threadID: string,
+  forceRefresh = false
+): Promise<void> => {
+  await ensureThreadNicknamesCached(api, threadID, forceRefresh);
+};
+
+const getCachedNickname = (threadID: string, userID: string): string => {
+  return nicknameCache.get(threadID)?.get(userID) ?? '';
+};
+
+const setCachedNickname = (threadID: string, userID: string, nickname: string): void => {
+  if (!nicknameCache.has(threadID)) {
+    nicknameCache.set(threadID, new Map());
+  }
+  nicknameCache.get(threadID)!.set(userID, nickname || '');
+};
 
 const canMakeChange = (key: string): boolean => {
   const lastChange = recentChanges.get(key);
@@ -95,55 +145,59 @@ export const handleNicknameProtection = async (
   // Feature 3: Prevent members from changing other people's nicknames
   if (event.logMessageType === 'log:user-nickname') {
     try {
+      await ensureThreadNicknamesCached(api, threadID);
+
       const logData = (event as any).logMessageData;
       const targetUserID = logData?.participant_id || '';
       const nickname = logData?.nickname || '';
-      
-      // If someone tries to change another person's nickname (not their own)
-      if (author !== targetUserID) {
-        // Check if the author is a group admin
-        const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
-        
-        if (!isAuthorAdmin) {
-          // Non-admin tried to change someone else's nickname
-          const changeKey = `nickname-${threadID}-${targetUserID}-${author}`;
-          
-          if (canMakeChange(changeKey)) {
-            // Get the target user's previous nickname
-            api.getThreadInfo(threadID, (err, threadInfo) => {
-              if (err || !threadInfo) {
-                logger.error('Error getting thread info:', err);
-                return;
-              }
 
-              // Find the participant's original nickname
-              const participants = threadInfo.nicknames || {};
-              const previousNickname = participants[targetUserID] || '';
-              
-              // Revert the nickname change
-              api.changeNickname(previousNickname, threadID, targetUserID, (err) => {
-                if (err) {
-                  logger.error('Error reverting nickname:', err);
-                } else {
-                  logger.info(`Reverted nickname change for user ${targetUserID} in ${threadID}`);
-                  
-                  // Get user names for the message
-                  api.getUserInfo([author, targetUserID], (err, userInfo) => {
-                    if (err || !userInfo) return;
-                    
-                    const authorName = userInfo[author]?.name || 'Someone';
-                    const targetName = userInfo[targetUserID]?.name || 'another user';
-                    
-                    api.sendMessage(
-                      `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\n@${authorName}, you can only change your own nickname, not ${targetName}'s!\n\n✅ Nickname has been restored.\n\n━━━━━━━━━━━━━━━━━━━━`,
-                      threadID
-                    );
-                  });
-                }
-              });
+      // If the user is changing their own nickname, accept and update cache
+      if (author === targetUserID) {
+        setCachedNickname(threadID, targetUserID, nickname || '');
+        return;
+      }
+
+      const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+
+      if (!isAuthorAdmin) {
+        const changeKey = `nickname-${threadID}-${targetUserID}-${author}`;
+
+        if (canMakeChange(changeKey)) {
+          const previousNickname = getCachedNickname(threadID, targetUserID);
+          const revertNickname = previousNickname ?? '';
+
+          api.changeNickname(revertNickname, threadID, targetUserID, (err) => {
+            if (err) {
+              logger.error('Error reverting nickname:', err);
+              return;
+            }
+
+            // Keep cache aligned with the reverted nickname
+            setCachedNickname(threadID, targetUserID, revertNickname);
+
+            // Refresh cache in the background to pick up any other changes in the thread
+            ensureThreadNicknamesCached(api, threadID, true).catch(() => {
+              /* best effort */
             });
-          }
+
+            logger.info(`Reverted nickname change for user ${targetUserID} in ${threadID}`);
+
+            api.getUserInfo([author, targetUserID], (infoErr, userInfo) => {
+              if (infoErr || !userInfo) return;
+
+              const authorName = userInfo[author]?.name || 'Someone';
+              const targetName = userInfo[targetUserID]?.name || 'another user';
+
+              api.sendMessage(
+                `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\n@${authorName}, you can only change your own nickname, not ${targetName}'s!\n\n✅ Nickname has been restored.\n\n━━━━━━━━━━━━━━━━━━━━`,
+                threadID
+              );
+            });
+          });
         }
+      } else {
+        // Admins are allowed; update cache so we remember the new nickname
+        setCachedNickname(threadID, targetUserID, nickname || '');
       }
     } catch (error) {
       logger.error('Error in nickname protection:', error);

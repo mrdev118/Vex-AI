@@ -7,7 +7,7 @@ import { handleAnyEvent } from './anyEvent';
 import { handleChat } from './chat';
 import { handleCommand } from './command';
 import { handleEvent, onEvent } from './event';
-import { handleNicknameProtection } from './nicknameProtection';
+import { handleNicknameProtection, warmNicknameCache } from './nicknameProtection';
 import { presence } from './presence';
 import { handleReaction } from './reaction';
 import { read_receipt } from './readReceipt';
@@ -32,6 +32,9 @@ export const handleEventMain = async (
         const msgEvent = event as MessageEventType;
         const threadID = msgEvent.threadID;
         const isFirstChat = !firstChatMap.has(threadID);
+
+        // Warm nickname cache early so we can restore nicknames if needed
+        await warmNicknameCache(api, threadID);
 
         if (isFirstChat) {
           firstChatMap.set(threadID, true);
@@ -67,6 +70,7 @@ export const handleEventMain = async (
 
     case "event": {
       const threadEvent = event as ThreadEventType;
+      await warmNicknameCache(api, threadEvent.threadID);
       await handleNicknameProtection(api, threadEvent);
       await hooks.executeHandlerEvent(api, threadEvent);
       await handleEvent(api, threadEvent);

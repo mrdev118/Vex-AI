@@ -4,6 +4,7 @@ import { client } from '../client';
 import { logger } from '../utils/logger';
 import { Users } from '../../database/controllers/userController';
 import { Threads } from '../../database/controllers/threadController';
+import { warmNicknameCache } from './nicknameProtection';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -129,6 +130,9 @@ export const handleEvent = async (
     } catch (error) {
       logger.error('Error in auto-kick/welcome logic:', error);
     }
+
+    // Refresh nickname cache to include any newly added users
+    await warmNicknameCache(api, threadID, true);
   }
 
   // Goodbye message
@@ -182,6 +186,8 @@ export const handleEvent = async (
       logger.info(`Sending goodbye message for ${name}`);
       sendGoodbye(name);
     });
+
+    await warmNicknameCache(api, threadID, true);
   }
 };
 
