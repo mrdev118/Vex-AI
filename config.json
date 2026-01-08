@@ -23,7 +23,9 @@
     "key": "AIzaSyDwQ4tV_k91ywwWJwnN4NjsUTtkILC2VB8"
   },
   "disabledCommands": [
-    "vdgai"
+    "vdgai",
+    "ai",
+    "aiimg"
   ],
   "logger": {
     "level": "info",
