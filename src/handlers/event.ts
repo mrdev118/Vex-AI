@@ -134,59 +134,54 @@ export const handleEvent = async (
   // Goodbye message
   if (event.type === "event" && event.logMessageType === 'log:unsubscribe') {
     const threadID = event.threadID;
-    const leftParticipant = (event as any).logMessageData?.leftParticipantFbId;
-    
-    if (leftParticipant) {
-      logger.info(`User ${leftParticipant} left group ${threadID}`);
-      
-      api.getUserInfo(leftParticipant, (err, userInfo) => {
-        if (err) {
-          logger.error(`Error getting user info for ${leftParticipant}:`, err);
-          // Send goodbye message anyway with generic name
-          const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
-          if (fs.existsSync(goodbyePath)) {
-            const goodbyeMessage = {
-              body: `A user has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
-              attachment: fs.createReadStream(goodbyePath)
-            };
-            api.sendMessage(goodbyeMessage, threadID, (err) => {
-              if (err) {
-                logger.error('Error sending goodbye message:', err);
-              } else {
-                logger.info('Goodbye message sent (generic)');
-              }
-            });
-          } else {
-            logger.warn(`Goodbye image not found at ${goodbyePath}`);
-            api.sendMessage(`A user has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
-          }
-          return;
-        }
-        
-        const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
-        logger.info(`Sending goodbye message for ${name}`);
-        
-        const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
-        if (fs.existsSync(goodbyePath)) {
-          const goodbyeMessage = {
-            body: `${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
-            attachment: fs.createReadStream(goodbyePath)
-          };
-          api.sendMessage(goodbyeMessage, threadID, (err) => {
-            if (err) {
-              logger.error(`Error sending goodbye message for ${name}:`, err);
-            } else {
-              logger.info(`Goodbye message sent for ${name}`);
-            }
-          });
-        } else {
-          logger.warn(`Goodbye image not found at ${goodbyePath}`);
-          api.sendMessage(`${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
-        }
-      });
-    } else {
-      logger.warn(`No leftParticipantFbId found in unsubscribe event for group ${threadID}`);
+    const logData = (event as any).logMessageData || {};
+    const leftParticipant =
+      logData.leftParticipantFbId ||
+      logData.removedParticipantFbId ||
+      (Array.isArray(logData.removedParticipants) ? logData.removedParticipants[0]?.userFbId || logData.removedParticipants[0] : undefined);
+
+    if (!leftParticipant) {
+      logger.warn(`No participant information found in unsubscribe event for group ${threadID}`);
+      return;
     }
+
+    if (leftParticipant === api.getCurrentUserID()) {
+      logger.info(`Bot was removed from group ${threadID}, skipping goodbye message.`);
+      return;
+    }
+
+    const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
+    const sendGoodbye = (name: string): void => {
+      if (fs.existsSync(goodbyePath)) {
+        const goodbyeMessage = {
+          body: `${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
+          attachment: fs.createReadStream(goodbyePath)
+        };
+        api.sendMessage(goodbyeMessage, threadID, (err) => {
+          if (err) {
+            logger.error(`Error sending goodbye message for ${name}:`, err);
+          } else {
+            logger.info(`Goodbye message sent for ${name}`);
+          }
+        });
+      } else {
+        logger.warn(`Goodbye image not found at ${goodbyePath}`);
+        api.sendMessage(`${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
+      }
+    };
+
+    logger.info(`User ${leftParticipant} left group ${threadID}`);
+    api.getUserInfo(leftParticipant, (err, userInfo) => {
+      if (err) {
+        logger.error(`Error getting user info for ${leftParticipant}:`, err);
+        sendGoodbye('A user');
+        return;
+      }
+
+      const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : 'A user';
+      logger.info(`Sending goodbye message for ${name}`);
+      sendGoodbye(name);
+    });
   }
 };
 
