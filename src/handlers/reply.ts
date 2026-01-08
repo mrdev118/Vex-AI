@@ -3,7 +3,7 @@ import { Threads } from '../../database/controllers/threadController';
 import { Users } from '../../database/controllers/userController';
 import { MessageEventType, MessageReplyEventType } from '../../types';
 import { client } from '../client';
-import { botConfig } from '../config';
+import { botConfig, isOwner } from '../config';
 import { logger } from '../utils/logger';
 import { createMessageHelper } from '../utils/message';
 import { hasPermission } from '../utils/permissions';
@@ -24,6 +24,35 @@ export const handleReplyEvent = async (
 
   if (processingReplies.has(replyID)) {
     logger.debug(`HandleReply: Đang xử lý replyID ${replyID}, bỏ qua`);
+    return;
+  }
+
+  // Quick unsend helper: if user replies "unsend" to a bot message, remove that bot message
+  const bodyText = ((event as any).body || "").trim().toLowerCase();
+  const repliedSender = event.messageReply.senderID;
+  if (bodyText === "unsend" && repliedSender === api.getCurrentUserID()) {
+    if (!isOwner(event.senderID)) {
+      const messageHelper = createMessageHelper(api, event as any);
+      await messageHelper.send("❌ Only the bot owner can unsend my messages.");
+      return;
+    }
+    processingReplies.add(replyID);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        api.unsendMessage(replyID, (err?: Error) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+      const messageHelper = createMessageHelper(api, event as any);
+      await messageHelper.send("🗑️ Removed my previous message as requested.");
+    } catch (err) {
+      const messageHelper = createMessageHelper(api, event as any);
+      await messageHelper.send("⚠️ I couldn't unsend that message.");
+      logger.error('Unsend reply handler error:', err);
+    } finally {
+      processingReplies.delete(replyID);
+    }
     return;
   }
 

@@ -9,7 +9,15 @@ const command: ICommand = {
     },
 
     run: async ({ api, event }: IRunParams) => {
-        api.sendMessage(`Your UID: ${event.senderID}`, event.threadID);
+        const eventWithReply = event as any;
+        const mentionIDs = event.mentions ? Object.keys(event.mentions) : [];
+
+        const targetID = mentionIDs[0]
+            || (eventWithReply.messageReply ? eventWithReply.messageReply.senderID : undefined)
+            || event.senderID;
+
+        const label = targetID === event.senderID ? 'Your UID' : 'User UID';
+        api.sendMessage(`${label}: ${targetID}`, event.threadID);
     }
 };
 
