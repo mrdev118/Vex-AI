@@ -83,8 +83,8 @@ export const handleNicknameProtection = async (
 ): Promise<void> => {
   if (event.type !== "event") return;
 
-  const threadID = event.threadID;
-  const author = event.author;
+  const threadID = String(event.threadID);
+  const author = String(event.author ?? '');
 
   // Feature 1: Protect group chat name - only admins can change it
   if (event.logMessageType === 'log:thread-name') {
@@ -148,7 +148,7 @@ export const handleNicknameProtection = async (
       await ensureThreadNicknamesCached(api, threadID);
 
       const logData = (event as any).logMessageData;
-      const targetUserID = logData?.participant_id || '';
+      const targetUserID = String(logData?.participant_id ?? '');
       const nickname = logData?.nickname || '';
 
       // If the user is changing their own nickname, accept and update cache

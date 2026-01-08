@@ -11,13 +11,15 @@ export const isGroupAdmin = async (
   threadID: string
 ): Promise<boolean> => {
   try {
-    const cached = groupAdminCache.get(threadID);
+    const normalizedUserID = String(userID);
+    const normalizedThreadID = String(threadID);
+    const cached = groupAdminCache.get(normalizedThreadID);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.admins.includes(userID);
+      return cached.admins.includes(normalizedUserID);
     }
 
     const threadInfo: IFCAU_Thread | null = await new Promise((resolve) => {
-      api.getThreadInfo(threadID, (err: Error | null, info: IFCAU_Thread | null) => {
+      api.getThreadInfo(normalizedThreadID, (err: Error | null, info: IFCAU_Thread | null) => {
         if (err) {
           return resolve(null);
         }
@@ -26,14 +28,14 @@ export const isGroupAdmin = async (
     });
 
     if (threadInfo) {
-      const adminIDs = threadInfo.adminIDs || [];
+      const adminIDs = (threadInfo.adminIDs || []).map((id: any) => String(id));
 
-      groupAdminCache.set(threadID, {
+      groupAdminCache.set(normalizedThreadID, {
         admins: adminIDs,
         timestamp: Date.now()
       });
 
-      return adminIDs.includes(userID);
+      return adminIDs.includes(normalizedUserID);
     }
 
     return false;

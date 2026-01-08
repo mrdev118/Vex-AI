@@ -12,6 +12,8 @@ export const handleEvent = async (
   api: IFCAU_API,
   event: ThreadEventType
 ): Promise<void> => {
+  const threadID = String(event.threadID);
+  const currentUserID = String(api.getCurrentUserID());
   const processedCommands = new Set<ICommand>();
   for (const command of [...client.commands.values(), ...client.noprefix.values()]) {
     if (command.handleEvent && !processedCommands.has(command)) {
@@ -32,12 +34,17 @@ export const handleEvent = async (
 
   // Auto-kick logic for banned users and welcome messages
   if (event.type === "event" && event.logMessageType === 'log:subscribe') {
-    const threadID = event.threadID;
-    const addedParticipants = (event as any).logMessageData?.addedParticipants || [];
+    const addedParticipantsRaw = (event as any).logMessageData?.addedParticipants || [];
+    const addedParticipants = addedParticipantsRaw
+      .map((p: any) => ({
+        id: String(p.userFbId ?? p.userFbID ?? p.id ?? p.uid ?? ''),
+        fullName: String(p.fullName ?? p.name ?? '')
+      }))
+      .filter((p: { id: string }) => p.id);
     
     try {
       // Check if bot was just added to the group
-      const botAdded = addedParticipants.some((p: any) => p.userFbId === api.getCurrentUserID());
+      const botAdded = addedParticipants.some((p: any) => p.id === currentUserID);
       
       if (botAdded) {
         logger.info(`Bot was added to group ${threadID}`);
@@ -77,21 +84,22 @@ export const handleEvent = async (
       const threadData = await Threads.getData(threadID);
       let bannedList: string[] = [];
       try {
-        bannedList = JSON.parse(threadData.bannedUsers || "[]");
+        bannedList = JSON.parse(threadData.bannedUsers || "[]").map((id: any) => String(id));
       } catch (e) {
         bannedList = [];
       }
 
       // Process each added participant
       for (const participant of addedParticipants) {
-        const userFbId = participant.userFbId;
+        const userFbId = participant.id;
         
         // Skip if this is the bot itself
-        if (userFbId === api.getCurrentUserID()) {
+        if (userFbId === currentUserID) {
           continue;
         }
         
-        logger.info(`Processing new participant: ${participant.fullName} (${userFbId}) in group ${threadID}`);
+        const participantName = participant.fullName || 'A user';
+        logger.info(`Processing new participant: ${participantName} (${userFbId}) in group ${threadID}`);
         
         // Check if user is banned
         if (bannedList.includes(userFbId)) {
@@ -108,23 +116,23 @@ export const handleEvent = async (
         }
         
         // Send welcome message for non-banned users
-        logger.info(`Sending welcome message for ${participant.fullName}`);
+        logger.info(`Sending welcome message for ${participantName}`);
         const welcomePath = path.join(process.cwd(), 'attached_assets/welcome.jpg');
         if (fs.existsSync(welcomePath)) {
           const welcomeMessage = {
-            body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
+            body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participantName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
             attachment: fs.createReadStream(welcomePath)
           };
           api.sendMessage(welcomeMessage, threadID, (err) => {
             if (err) {
-              logger.error(`Error sending welcome message for ${participant.fullName}:`, err);
+              logger.error(`Error sending welcome message for ${participantName}:`, err);
             } else {
-              logger.info(`Welcome message sent for ${participant.fullName}`);
+              logger.info(`Welcome message sent for ${participantName}`);
             }
           });
         } else {
           logger.warn(`Welcome image not found at ${welcomePath}`);
-          api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`, threadID);
+          api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participantName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`, threadID);
         }
       }
     } catch (error) {
@@ -137,19 +145,20 @@ export const handleEvent = async (
 
   // Goodbye message
   if (event.type === "event" && event.logMessageType === 'log:unsubscribe') {
-    const threadID = event.threadID;
     const logData = (event as any).logMessageData || {};
-    const leftParticipant =
+    const leftParticipantRaw =
       logData.leftParticipantFbId ||
       logData.removedParticipantFbId ||
       (Array.isArray(logData.removedParticipants) ? logData.removedParticipants[0]?.userFbId || logData.removedParticipants[0] : undefined);
+
+    const leftParticipant = leftParticipantRaw ? String(leftParticipantRaw) : undefined;
 
     if (!leftParticipant) {
       logger.warn(`No participant information found in unsubscribe event for group ${threadID}`);
       return;
     }
 
-    if (leftParticipant === api.getCurrentUserID()) {
+    if (leftParticipant === currentUserID) {
       logger.info(`Bot was removed from group ${threadID}, skipping goodbye message.`);
       return;
     }
