@@ -29,7 +29,7 @@ export const handleEvent = async (
     }
   }
 
-  // Auto-kick logic for banned users
+  // Auto-kick logic for banned users and welcome messages
   if (event.type === "event" && event.logMessageType === 'log:subscribe') {
     const threadID = event.threadID;
     const addedParticipants = (event as any).logMessageData?.addedParticipants || [];
@@ -39,6 +39,8 @@ export const handleEvent = async (
       const botAdded = addedParticipants.some((p: any) => p.userFbId === api.getCurrentUserID());
       
       if (botAdded) {
+        logger.info(`Bot was added to group ${threadID}`);
+        
         // Note: Facebook may not allow bots to change their own nicknames in all groups
         // Attempting to set bot nickname with delay
         setTimeout(() => {
@@ -49,7 +51,7 @@ export const handleEvent = async (
               logger.info(`Bot nickname change requested for group ${threadID} - may require manual approval`);
             }
           });
-        }, 3000); // Increased delay to 3 seconds
+        }, 3000);
         
         // Send bot connected message with image
         const connectedPath = path.join(process.cwd(), 'attached_assets/connected.gif');
@@ -68,7 +70,7 @@ export const handleEvent = async (
           logger.warn(`Connected image not found at ${connectedPath}`);
           api.sendMessage(`✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`, threadID);
         }
-        return; // Exit early after sending bot connected message
+        // Don't return here - continue to process other participants if any
       }
       
       const threadData = await Threads.getData(threadID);
@@ -88,25 +90,37 @@ export const handleEvent = async (
           continue;
         }
         
+        logger.info(`Processing new participant: ${participant.fullName} (${userFbId}) in group ${threadID}`);
+        
         // Check if user is banned
         if (bannedList.includes(userFbId)) {
+          logger.info(`User ${userFbId} is banned, attempting to kick...`);
           api.removeUserFromGroup(userFbId, threadID, (err) => {
             if (!err) {
               api.sendMessage(`🚫 Auto-kick: User ${participant.fullName} (${userFbId}) is permanently banned from this group.`, threadID);
               logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
+            } else {
+              logger.error(`Failed to kick banned user ${userFbId}:`, err);
             }
           });
           continue;
         }
         
         // Send welcome message for non-banned users
+        logger.info(`Sending welcome message for ${participant.fullName}`);
         const welcomePath = path.join(process.cwd(), 'attached_assets/welcome.jpg');
         if (fs.existsSync(welcomePath)) {
           const welcomeMessage = {
             body: `𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`,
             attachment: fs.createReadStream(welcomePath)
           };
-          api.sendMessage(welcomeMessage, threadID);
+          api.sendMessage(welcomeMessage, threadID, (err) => {
+            if (err) {
+              logger.error(`Error sending welcome message for ${participant.fullName}:`, err);
+            } else {
+              logger.info(`Welcome message sent for ${participant.fullName}`);
+            }
+          });
         } else {
           logger.warn(`Welcome image not found at ${welcomePath}`);
           api.sendMessage(`𝗪𝗲𝗹𝗰𝗼𝗺𝗲 to 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣, ${participant.fullName}!\nTime to grind your 𝗞𝗶𝗹𝗹𝘀.\n\n𝗝𝗼𝗶𝗻 𝗢𝘂𝗿 𝗗𝗶𝘀𝗰𝗼𝗿𝗱: https://discord.gg/WXpMxBEYYA`, threadID);
@@ -121,21 +135,57 @@ export const handleEvent = async (
   if (event.type === "event" && event.logMessageType === 'log:unsubscribe') {
     const threadID = event.threadID;
     const leftParticipant = (event as any).logMessageData?.leftParticipantFbId;
+    
     if (leftParticipant) {
+      logger.info(`User ${leftParticipant} left group ${threadID}`);
+      
       api.getUserInfo(leftParticipant, (err, userInfo) => {
+        if (err) {
+          logger.error(`Error getting user info for ${leftParticipant}:`, err);
+          // Send goodbye message anyway with generic name
+          const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
+          if (fs.existsSync(goodbyePath)) {
+            const goodbyeMessage = {
+              body: `A user has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
+              attachment: fs.createReadStream(goodbyePath)
+            };
+            api.sendMessage(goodbyeMessage, threadID, (err) => {
+              if (err) {
+                logger.error('Error sending goodbye message:', err);
+              } else {
+                logger.info('Goodbye message sent (generic)');
+              }
+            });
+          } else {
+            logger.warn(`Goodbye image not found at ${goodbyePath}`);
+            api.sendMessage(`A user has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
+          }
+          return;
+        }
+        
         const name = userInfo && userInfo[leftParticipant] ? userInfo[leftParticipant].name : "A user";
+        logger.info(`Sending goodbye message for ${name}`);
+        
         const goodbyePath = path.join(process.cwd(), 'attached_assets/goodbye.jpeg');
         if (fs.existsSync(goodbyePath)) {
           const goodbyeMessage = {
             body: `${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`,
             attachment: fs.createReadStream(goodbyePath)
           };
-          api.sendMessage(goodbyeMessage, threadID);
+          api.sendMessage(goodbyeMessage, threadID, (err) => {
+            if (err) {
+              logger.error(`Error sending goodbye message for ${name}:`, err);
+            } else {
+              logger.info(`Goodbye message sent for ${name}`);
+            }
+          });
         } else {
           logger.warn(`Goodbye image not found at ${goodbyePath}`);
           api.sendMessage(`${name} has 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱. Was it a 𝗥𝗮𝗴𝗲 𝗤𝘂𝗶𝘁?`, threadID);
         }
       });
+    } else {
+      logger.warn(`No leftParticipantFbId found in unsubscribe event for group ${threadID}`);
     }
   }
 };
