@@ -1,6 +1,6 @@
 import type { IFCAU_API, IFCAU_ListenMessage } from '@dongdev/fca-unofficial';
 import handleCreateData from '../../database/handleCreateData';
-import { MessageEventType, MessageReactionEventType, MessageReplyEventType, PresenceEventType, ReadReceiptEventType, ThreadEventType, TypingEventType } from '../../types';
+import { CommandEventType, MessageEventType, MessageReactionEventType, MessageReplyEventType, PresenceEventType, ReadReceiptEventType, ThreadEventType, TypingEventType } from '../../types';
 import { hooks } from '../hooks';
 import { messageLogger } from '../utils/messageLogger';
 import { handleAnyEvent } from './anyEvent';
@@ -28,7 +28,10 @@ export const handleEventMain = async (
     case "message":
     case "message_reply":
     case "message_unsend": {
-      if (event.type === "message") {
+      const isMessage = event.type === "message";
+      const isMessageReply = event.type === "message_reply";
+
+      if (isMessage) {
         const msgEvent = event as MessageEventType;
         const threadID = msgEvent.threadID;
         const isFirstChat = !firstChatMap.has(threadID);
@@ -42,7 +45,7 @@ export const handleEventMain = async (
         }
       }
 
-      if (event.type === "message") {
+      if (isMessage) {
         const msgEvent = event as MessageEventType;
         await handleCreateData(api, msgEvent);
 
@@ -53,15 +56,15 @@ export const handleEventMain = async (
         await handleChat(api, msgEvent);
       }
 
-      if (event.type === "message") {
+      if (isMessage) {
         await hooks.executeOnRun(api, event as MessageEventType);
       }
 
-      if (event.type === "message") {
-        await handleCommand(api, event as MessageEventType);
+      if (isMessage || isMessageReply) {
+        await handleCommand(api, event as unknown as CommandEventType);
       }
 
-      if (event.type === "message_reply") {
+      if (isMessageReply) {
         await hooks.executeOnReply(api, event as MessageReplyEventType);
         await handleReplyEvent(api, event as MessageReplyEventType);
       }

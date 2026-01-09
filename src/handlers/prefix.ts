@@ -1,5 +1,5 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
-import { MessageEventType } from '../../types';
+import { CommandEventType } from '../../types';
 import { client } from '../client';
 import { PREFIX, botConfig, DISABLED_COMMANDS, isOwner } from '../config';
 import { logger } from '../utils/logger';
@@ -13,7 +13,7 @@ import { checkFunCooldown, getFunCooldownMs } from '../utils/cooldown';
 
 export const handlePrefixCommand = async (
   api: IFCAU_API,
-  event: MessageEventType,
+  event: CommandEventType,
   body: string
 ): Promise<boolean> => {
   if (!body.startsWith(PREFIX)) return false;

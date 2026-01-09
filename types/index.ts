@@ -24,6 +24,9 @@ export type PresenceEventType = Extract<IFCAU_ListenMessage, { type: "presence" 
 export type MessageUnsendEventType = Extract<IFCAU_ListenMessage, { type: "message_unsend" }>;
 export type ThreadEventType = Extract<IFCAU_ListenMessage, { type: "event" }>;
 
+// Commands can be triggered from regular messages or replies
+export type CommandEventType = MessageEventType | MessageReplyEventType;
+
 export type CommandRole = 0 | 1 | 2 | 3;
 
 export interface ICommandConfig {
@@ -53,7 +56,7 @@ export interface FCAError extends Error {
 
 export interface IRunParams {
   api: IFCAU_API;
-  event: MessageEventType;
+  event: CommandEventType;
   args: string[];
   name: string;
   config: ICommandConfig;

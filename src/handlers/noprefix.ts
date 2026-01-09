@@ -1,7 +1,7 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import { Threads } from '../../database/controllers/threadController';
 import { Users } from '../../database/controllers/userController';
-import { MessageEventType } from '../../types';
+import { CommandEventType } from '../../types';
 import { client } from '../client';
 import { botConfig, isOwner } from '../config';
 import { logger } from '../utils/logger';
@@ -12,7 +12,7 @@ import { checkFunCooldown, getFunCooldownMs } from '../utils/cooldown';
 
 export const handleNoPrefixCommand = async (
   api: IFCAU_API,
-  event: MessageEventType,
+  event: CommandEventType,
   body: string
 ): Promise<void> => {
   const isOwnerUser = isOwner(event.senderID);

@@ -1,11 +1,11 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
-import { MessageEventType } from '../../types';
+import { CommandEventType } from '../../types';
 import { handlePrefixCommand } from './prefix';
 import { handleNoPrefixCommand } from './noprefix';
 
 export const handleCommand = async (
   api: IFCAU_API,
-  event: MessageEventType
+  event: CommandEventType
 ): Promise<void> => {
   const body = event.body?.trim() || "";
 

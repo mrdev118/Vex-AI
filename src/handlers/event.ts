@@ -89,6 +89,25 @@ export const handleEvent = async (
         bannedList = [];
       }
 
+      // Load temporary bans (e.g., spam auto-bans) and drop expired ones
+      const settings = await Threads.getSettings(threadID);
+      const rawTempBans = (settings as any).tempBans || {};
+      const now = Date.now();
+      const tempBans: Record<string, number> = {};
+      let tempBansChanged = false;
+
+      for (const [id, until] of Object.entries(rawTempBans)) {
+        if (typeof until === 'number' && until > now) {
+          tempBans[id] = until;
+        } else {
+          tempBansChanged = true;
+        }
+      }
+      if (tempBansChanged) {
+        (settings as any).tempBans = tempBans;
+        await Threads.setSettings(threadID, settings);
+      }
+
       // Process each added participant
       for (const participant of addedParticipants) {
         const userFbId = participant.id;
@@ -101,7 +120,7 @@ export const handleEvent = async (
         const participantName = participant.fullName || 'A user';
         logger.info(`Processing new participant: ${participantName} (${userFbId}) in group ${threadID}`);
         
-        // Check if user is banned
+        // Check if user is permanently or temporarily banned
         if (bannedList.includes(userFbId)) {
           logger.info(`User ${userFbId} is banned, attempting to kick...`);
           api.removeUserFromGroup(userFbId, threadID, (err) => {
@@ -110,6 +129,24 @@ export const handleEvent = async (
               logger.info(`Auto-kicked banned user ${userFbId} from group ${threadID}`);
             } else {
               logger.error(`Failed to kick banned user ${userFbId}:`, err);
+            }
+          });
+          continue;
+        }
+
+        const tempBanUntil = tempBans[userFbId];
+        if (tempBanUntil && tempBanUntil > now) {
+          const minutesLeft = Math.max(1, Math.ceil((tempBanUntil - now) / (60 * 1000)));
+          logger.info(`User ${userFbId} is temporarily banned for spam, attempting to kick...`);
+          api.removeUserFromGroup(userFbId, threadID, (err) => {
+            if (!err) {
+              api.sendMessage(
+                `🚫 Auto-kick: ${participant.fullName || 'User'} (${userFbId}) is temporarily banned for spam. Time remaining: ${minutesLeft} minute(s).`,
+                threadID
+              );
+              logger.info(`Auto-kicked temp-banned user ${userFbId} from group ${threadID}`);
+            } else {
+              logger.error(`Failed to kick temp-banned user ${userFbId}:`, err);
             }
           });
           continue;
