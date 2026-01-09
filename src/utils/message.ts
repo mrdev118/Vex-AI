@@ -1,5 +1,5 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
-import type { MessageEventType } from '../../types';
+import type { CommandEventType } from '../../types';
 
 export interface MessageHelper {
   send: (message: string, threadID?: string) => Promise<void>;
@@ -9,7 +9,7 @@ export interface MessageHelper {
 
 export const createMessageHelper = (
   api: IFCAU_API,
-  event: MessageEventType
+  event: CommandEventType
 ): MessageHelper => {
   const threadID = event.threadID;
   const messageID = event.messageID;

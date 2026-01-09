@@ -1,5 +1,5 @@
 import type { IFCAU_API, IFCAU_Thread } from '@dongdev/fca-unofficial';
-import type { CommandRole, MessageEventType } from '../../types';
+import type { CommandRole, CommandEventType } from '../../types';
 import { isAdmin, isOwner } from '../config';
 
 const groupAdminCache = new Map<string, { admins: string[]; timestamp: number }>();
@@ -47,7 +47,7 @@ export const isGroupAdmin = async (
 export const getUserRole = async (
   api: IFCAU_API,
   userID: string,
-  event: MessageEventType
+  event: CommandEventType
 ): Promise<CommandRole> => {
   if (isOwner(userID)) {
     return 3;
@@ -70,7 +70,7 @@ export const getUserRole = async (
 export const hasPermission = async (
   api: IFCAU_API,
   userID: string,
-  event: MessageEventType,
+  event: CommandEventType,
   requiredRole: CommandRole
 ): Promise<boolean> => {
   const userRole = await getUserRole(api, userID, event);

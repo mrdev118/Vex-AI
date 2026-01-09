@@ -1,5 +1,5 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
-import type { MessageEventType, ICommand } from '../../types';
+import type { CommandEventType, ICommand } from '../../types';
 import { isOwner, isAdmin, OWNER_ID, ADMIN_IDS } from '../config';
 import { Users } from '../../database/controllers/userController';
 import { Threads } from '../../database/controllers/threadController';
@@ -226,7 +226,7 @@ interface PermissionCheckResult {
 export const checkCommandPermission = async (
   api: IFCAU_API,
   command: ICommand,
-  event: MessageEventType,
+  event: CommandEventType,
   config: {
     adminOnly?: boolean;
     adminBox?: boolean | Record<string, boolean>;
