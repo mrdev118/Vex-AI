@@ -63,7 +63,7 @@ const queryBedrockServer = (host: string, port: number): Promise<BedrockServerSt
   });
 };
 
-const getThreadInfo = (api: any, threadID: string) => {
+const getThreadInfo = (api: any, threadID: string): Promise<any | null> => {
   return new Promise((resolve) => {
     api.getThreadInfo(threadID, (err: Error | null, info: any) => {
       if (err) return resolve(null);
@@ -104,14 +104,17 @@ const command: ICommand = {
   },
 
   run: async ({ api, event }: IRunParams) => {
-    const { threadID, isGroup } = event;
+    const threadID = (event as any)?.threadID;
+    const isGroup = Boolean((event as any)?.isGroup);
 
     try {
-      const [threadInfo, serverStatus, ownerAdminNames] = await Promise.all([
+      const [threadInfoRaw, serverStatus, ownerAdminNames] = await Promise.all([
         isGroup ? getThreadInfo(api, threadID) : Promise.resolve(null),
         queryBedrockServer(SERVER_HOST, SERVER_PORT),
         getUserNames(api, [OWNER_ID, ...ADMIN_IDS])
       ]);
+
+      const threadInfo = threadInfoRaw as any;
 
       const ownerName = ownerAdminNames[OWNER_ID] || 'Unknown';
       const adminNames = ADMIN_IDS.map(id => ownerAdminNames[id] || 'Unknown');

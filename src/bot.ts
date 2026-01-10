@@ -66,7 +66,8 @@ export const startBot = (): void => {
     const appState = readAppState();
     if (!appState) return;
 
-    login({ appState }, (err: Error | null, api: IFCAU_API | null) => {
+    // Type definitions expect AppstateData, but runtime accepts raw cookie array; cast to satisfy TS.
+    login({ appState: appState as any }, (err: Error | null, api: IFCAU_API | null) => {
       if (err || !api) {
         console.error('❌ Login error:', err);
         logger.error('Login error:', err);
