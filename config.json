@@ -18,6 +18,10 @@
     "updatePresence": false,
     "online": true
   },
+  "login": {
+    "email": "61577779507811",
+    "password": "vexonsmp*2025"
+  },
   "externalApi": {
     "url": "https://minhdong.site",
     "key": "AIzaSyDwQ4tV_k91ywwWJwnN4NjsUTtkILC2VB8"
