@@ -88,11 +88,7 @@ ${categoryEmoji} ${cmd.config.category || 'General'}
         const formatLines = (items: string[]): string => {
             if (items.length === 0) return 'None';
             const sorted = [...items].sort((a, b) => a.localeCompare(b));
-            const lines: string[] = [];
-            for (let i = 0; i < sorted.length; i += 3) {
-                lines.push(sorted.slice(i, i + 3).join(' | '));
-            }
-            return lines.join('\n');
+                return sorted.map(item => `- ${item}`).join('\n');
         };
 
         let totalVisible = helpful.length + serverCommands.length;
@@ -100,9 +96,7 @@ ${categoryEmoji} ${cmd.config.category || 'General'}
             totalVisible += adminCommands.length;
         }
 
-        let message = `━━━━ 🤖 VEX AI ━━━━
-⚡ Prefix: ${PREFIX}
-📊 Commands: ${totalVisible}\n`;
+            let message = `🤖 VEX AI HELP\n⚡ Prefix: ${PREFIX}\n📊 Commands: ${totalVisible}\n`;
 
         message += `\n🔧 HELPFUL COMMANDS\n${formatLines(helpful)}`;
         message += `\n🛰️ SERVER COMMAND\n${formatLines(serverCommands)}`;
@@ -111,8 +105,7 @@ ${categoryEmoji} ${cmd.config.category || 'General'}
             message += `\n🛡️ ADMIN COMMANDS\n${formatLines(adminCommands)}`;
         }
 
-        message += `\n💡 ${PREFIX}help <cmd> for info
-━━━━━━━━━━━━━━━━━`;
+            message += `\n💡 ${PREFIX}help <cmd> for info`;
 
         api.sendMessage(message, event.threadID);
     }

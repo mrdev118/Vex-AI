@@ -138,7 +138,7 @@ const command: ICommand = {
 
       const adminsLine = adminNames.length > 0 ? adminNames.join(', ') : 'None';
 
-      const message = `━━━━ VEXON SNAPSHOT ━━━━\n` +
+      const message = `**VexonSMP Information**\n` +
         `👑 Owner: ${ownerName} (${OWNER_ID})\n` +
         `🛠️ Admins: ${adminsLine}\n` +
         `${groupSection}\n\n` +
