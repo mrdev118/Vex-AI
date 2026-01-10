@@ -25,7 +25,18 @@
   "disabledCommands": [
     "vdgai",
     "ai",
-    "aiimg"
+    "aiimg",
+    "balance",
+    "calc",
+    "choose",
+    "coin",
+    "daily",
+    "dice",
+    "gemini",
+    "quote",
+    "random",
+    "top",
+    "weather"
   ],
   "logger": {
     "level": "info",

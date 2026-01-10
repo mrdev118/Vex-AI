@@ -1,6 +1,7 @@
 import { ICommand, IRunParams } from '../../types';
 import { client } from '../../src/client';
-import { PREFIX } from '../../src/config';
+import { PREFIX, isOwner, isAdmin } from '../../src/config';
+import { hasPermission } from '../../src/utils/permissions';
 
 const categoryEmojis: { [key: string]: string } = {
     'Admin': '🛡️',
@@ -24,14 +25,29 @@ const command: ICommand = {
 
     run: async ({ api, event, args }: IRunParams) => {
         const commandName = args[0]?.toLowerCase();
+        const hasAdminAccess = await hasPermission(api, event.senderID, event, 1);
+
+        const dedupedCommands = new Map<string, ICommand>();
+        for (const [, cmd] of client.commands.entries()) {
+          const baseName = cmd.config.name.toLowerCase();
+          if (!dedupedCommands.has(baseName)) {
+            dedupedCommands.set(baseName, cmd);
+          }
+        }
 
         if (commandName) {
             const cmd = client.commands.get(commandName);
             if (cmd) {
+                const isAdminCommand = (cmd.config.category || '').toLowerCase() === 'admin' || (cmd.config.role ?? 0) > 0;
+                if (isAdminCommand && !hasAdminAccess) {
+                    api.sendMessage(`❌ Command not available: "${commandName}"`, event.threadID);
+                    return;
+                }
+
                 const categoryEmoji = categoryEmojis[cmd.config.category || 'General'] || '📦';
                 const aliases = cmd.config.aliases ? `\n🔄 ${cmd.config.aliases.join(', ')}` : '';
                 const usage = cmd.config.usages ? `\n📖 ${cmd.config.usages}` : '';
-                const role = cmd.config.role !== undefined ? `\n🔐 ${['User', 'Admin', 'Bot Admin', 'Owner'][cmd.config.role]}` : '';
+                const role = cmd.config.role !== undefined ? `\n🔐 ${['User', 'Group Admin', 'Bot Admin', 'Owner'][cmd.config.role]}` : '';
                 
                 const info = `━━━ 📋 COMMAND INFO ━━━
 
@@ -47,46 +63,52 @@ ${categoryEmoji} ${cmd.config.category || 'General'}
             return;
         }
 
-        const categories = new Map<string, Array<{ name: string; desc: string }>>();
+        const helpful: string[] = [];
+        const serverCommands: string[] = [];
+        const adminCommands: string[] = [];
 
-        for (const [name, cmd] of client.commands.entries()) {
-            const category = cmd.config.category || 'General';
-            if (!categories.has(category)) {
-                categories.set(category, []);
+        dedupedCommands.forEach((cmd) => {
+            const nameLabel = `${PREFIX}${cmd.config.name}`;
+            const lowerCategory = (cmd.config.category || '').toLowerCase();
+            const requiresAdmin = lowerCategory === 'admin' || (cmd.config.role ?? 0) > 0;
+
+            if (cmd.config.name.toLowerCase() === 'server') {
+                serverCommands.push(nameLabel);
+                return;
             }
-            categories.get(category)!.push({
-                name: name,
-                desc: cmd.config.description || 'No description'
-            });
-        }
 
-        // Sort categories by priority
-        const categoryOrder = ['System', 'Admin', 'AI', 'Entertainment', 'Utility', 'Media', 'General'];
-        const sortedCategories = Array.from(categories.entries()).sort((a, b) => {
-            const indexA = categoryOrder.indexOf(a[0]);
-            const indexB = categoryOrder.indexOf(b[0]);
-            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+            if (requiresAdmin) {
+                adminCommands.push(nameLabel);
+                return;
+            }
+
+            helpful.push(nameLabel);
         });
+
+        const formatLines = (items: string[]): string => {
+            if (items.length === 0) return 'None';
+            const sorted = [...items].sort((a, b) => a.localeCompare(b));
+            const lines: string[] = [];
+            for (let i = 0; i < sorted.length; i += 3) {
+                lines.push(sorted.slice(i, i + 3).join(' | '));
+            }
+            return lines.join('\n');
+        };
+
+        let totalVisible = helpful.length + serverCommands.length;
+        if (hasAdminAccess) {
+            totalVisible += adminCommands.length;
+        }
 
         let message = `━━━━ 🤖 VEX AI ━━━━
 ⚡ Prefix: ${PREFIX}
-📊 Commands: ${client.commands.size}
+📊 Commands: ${totalVisible}\n`;
 
-`;
+        message += `\n🔧 HELPFUL COMMANDS\n${formatLines(helpful)}`;
+        message += `\n🛰️ SERVER COMMAND\n${formatLines(serverCommands)}`;
 
-        for (const [category, commands] of sortedCategories) {
-            const emoji = categoryEmojis[category] || '📦';
-            message += `\n${emoji} ${category.toUpperCase()}\n`;
-            
-            // Sort commands alphabetically
-            commands.sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Display commands in compact format (3 per line on mobile)
-            const cmdNames = commands.map(cmd => PREFIX + cmd.name);
-            for (let i = 0; i < cmdNames.length; i += 3) {
-                const line = cmdNames.slice(i, i + 3).join(' | ');
-                message += `${line}\n`;
-            }
+        if (hasAdminAccess && adminCommands.length > 0) {
+            message += `\n🛡️ ADMIN COMMANDS\n${formatLines(adminCommands)}`;
         }
 
         message += `\n💡 ${PREFIX}help <cmd> for info
