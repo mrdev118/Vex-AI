@@ -1,67 +1,9 @@
 import { ICommand, IRunParams } from '../../types';
 import { ADMIN_IDS, BOT_NAME, OWNER_ID, PREFIX } from '../../src/config';
-import * as dgram from 'dgram';
+import { getBedrockServerStatus } from '../../src/utils/serverStatus';
 
 const SERVER_HOST = 'vexonsmp.sereinhost.com';
 const SERVER_PORT = 25581;
-
-interface BedrockServerStatus {
-  online: boolean;
-  motd?: string;
-  players?: number;
-  maxPlayers?: number;
-  version?: string;
-  error?: string;
-}
-
-const queryBedrockServer = (host: string, port: number): Promise<BedrockServerStatus> => {
-  return new Promise((resolve) => {
-    const socket = dgram.createSocket('udp4');
-    const timeout = setTimeout(() => {
-      socket.close();
-      resolve({ online: false, error: 'Server timeout' });
-    }, 5000);
-
-    const pingPacket = Buffer.from([
-      0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    ]);
-
-    socket.on('message', (msg) => {
-      clearTimeout(timeout);
-      socket.close();
-
-      try {
-        const response = msg.toString('utf-8');
-        const parts = response.split(';');
-
-        if (parts.length >= 7) {
-          resolve({
-            online: true,
-            motd: parts[1] || 'Unknown',
-            players: parseInt(parts[4]) || 0,
-            maxPlayers: parseInt(parts[5]) || 0,
-            version: parts[3] || 'Unknown'
-          });
-        } else {
-          resolve({ online: false, error: 'Invalid response' });
-        }
-      } catch (error) {
-        resolve({ online: false, error: 'Parse error' });
-      }
-    });
-
-    socket.on('error', (err) => {
-      clearTimeout(timeout);
-      socket.close();
-      resolve({ online: false, error: err.message });
-    });
-
-    socket.send(pingPacket, port, host);
-  });
-};
 
 const getThreadInfo = (api: any, threadID: string): Promise<any | null> => {
   return new Promise((resolve) => {
@@ -110,7 +52,7 @@ const command: ICommand = {
     try {
       const [threadInfoRaw, serverStatus, ownerAdminNames] = await Promise.all([
         isGroup ? getThreadInfo(api, threadID) : Promise.resolve(null),
-        queryBedrockServer(SERVER_HOST, SERVER_PORT),
+        getBedrockServerStatus(SERVER_HOST, SERVER_PORT),
         getUserNames(api, [OWNER_ID, ...ADMIN_IDS])
       ]);
 
@@ -125,13 +67,17 @@ const command: ICommand = {
 
       let serverSection = '🛰️ Server: OFFLINE';
       if (serverStatus.online) {
+        const playersLine = serverStatus.players
+          ? `👥 Players: ${serverStatus.players.online}/${serverStatus.players.max}`
+          : '👥 Players: Unknown';
+
         serverSection = [
           '🛰️ Server: ONLINE',
-          `👥 Players: ${serverStatus.players}/${serverStatus.maxPlayers}`,
+          playersLine,
           `📡 Address: ${SERVER_HOST}:${SERVER_PORT}`,
-          `🗒️ MOTD: ${serverStatus.motd}`,
-          `🧭 Version: ${serverStatus.version}`
-        ].join('\n');
+          serverStatus.motd ? `🗒️ MOTD: ${serverStatus.motd}` : undefined,
+          serverStatus.version ? `🧭 Version: ${serverStatus.version}` : undefined
+        ].filter(Boolean).join('\n');
       } else if (serverStatus.error) {
         serverSection = `🛰️ Server: OFFLINE\n⚠️ ${serverStatus.error}\n📡 Address: ${SERVER_HOST}:${SERVER_PORT}`;
       }
