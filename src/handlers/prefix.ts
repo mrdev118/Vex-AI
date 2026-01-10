@@ -100,7 +100,8 @@ export const handlePrefixCommand = async (
     if (DISABLED_COMMANDS.includes(commandName)) {
       return false;
     }
-    api.sendMessage(`❓ Command not found "${commandName}". Use ${PREFIX}help to view the list.`, event.threadID);
+    // Silently ignore unknown commands to avoid spammy error messages and rate limits
+    logger.debug(`Command not found: ${commandName}`);
     return true;
   }
 };
