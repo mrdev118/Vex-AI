@@ -10,6 +10,7 @@ import { hasPermission } from '../utils/permissions';
 import { checkCommandPermission } from '../utils/permissionsExtended';
 import { createMessageHelper as createHelper } from '../utils/message';
 import { checkFunCooldown, getFunCooldownMs } from '../utils/cooldown';
+import { loadSingleCommand } from '../loader';
 
 export const handlePrefixCommand = async (
   api: IFCAU_API,
@@ -23,7 +24,16 @@ export const handlePrefixCommand = async (
 
   if (!commandName) return false;
 
-  const command = client.commands.get(commandName);
+  let command = client.commands.get(commandName);
+
+  // Attempt lazy reload if the command was not loaded initially
+  if (!command && !DISABLED_COMMANDS.includes(commandName)) {
+    const reloadResult = loadSingleCommand(commandName);
+    if (reloadResult.success) {
+      command = client.commands.get(commandName);
+      logger.info(`Lazy-loaded command on demand: ${commandName}`);
+    }
+  }
 
   if (command) {
     try {

@@ -21,40 +21,33 @@ const registerCommand = (command: ICommand, fullPath: string, dir: string): void
   const category = path.relative(COMMANDS_DIR, dir).replace(/\\/g, '/') || 'root';
   const prefix = category !== 'root' ? `[${category}]` : '';
 
-  const oldCommand = client.commands.get(command.config.name) || client.noprefix.get(command.config.name);
-  if (oldCommand?.config?.aliases) {
-    oldCommand.config.aliases.forEach(alias => {
+  const existing = client.commands.get(cmdNameLower) || client.noprefix.get(cmdNameLower);
+  if (existing?.config?.aliases) {
+    existing.config.aliases.forEach(alias => {
       client.commands.delete(alias.toLowerCase());
       client.noprefix.delete(alias.toLowerCase());
     });
   }
+
+  // Clear both lowercase and original keys to avoid stale entries
+  client.commands.delete(cmdNameLower);
+  client.noprefix.delete(cmdNameLower);
   client.commands.delete(command.config.name);
   client.noprefix.delete(command.config.name);
 
-  if (command.config.hasPrefix === false) {
-    client.noprefix.set(command.config.name, command);
-    if (command.config.aliases && Array.isArray(command.config.aliases)) {
-      command.config.aliases.forEach(alias => {
-        const aliasLower = alias.toLowerCase();
-        if (client.noprefix.has(aliasLower) && client.noprefix.get(aliasLower)?.config.name !== command.config.name) {
-          logger.warn(`${prefix} Alias "${alias}" is already used by another command, skipping`);
-        } else {
-          client.noprefix.set(aliasLower, command);
-        }
-      });
-    }
-  } else {
-    client.commands.set(command.config.name, command);
-    if (command.config.aliases && Array.isArray(command.config.aliases)) {
-      command.config.aliases.forEach(alias => {
-        const aliasLower = alias.toLowerCase();
-        if (client.commands.has(aliasLower) && client.commands.get(aliasLower)?.config.name !== command.config.name) {
-          logger.warn(`${prefix} Alias "${alias}" is already used by another command, skipping`);
-        } else {
-          client.commands.set(aliasLower, command);
-        }
-      });
-    }
+  const targetMap = command.config.hasPrefix === false ? client.noprefix : client.commands;
+  targetMap.set(cmdNameLower, command);
+
+  if (command.config.aliases && Array.isArray(command.config.aliases)) {
+    command.config.aliases.forEach(alias => {
+      const aliasLower = alias.toLowerCase();
+      const collision = targetMap.get(aliasLower);
+      if (collision && collision.config.name !== command.config.name) {
+        logger.warn(`${prefix} Alias "${alias}" is already used by another command, skipping`);
+      } else {
+        targetMap.set(aliasLower, command);
+      }
+    });
   }
 };
 
@@ -73,7 +66,7 @@ export const findCommandFile = (targetName: string, dir: string = COMMANDS_DIR):
       try {
         delete require.cache[require.resolve(fullPath)];
         const command: ICommand = require(fullPath);
-        if (command.config?.name === targetName) {
+        if (command.config?.name?.toLowerCase() === targetName.toLowerCase()) {
           return fullPath;
         }
       } catch (error) {
