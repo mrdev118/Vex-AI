@@ -13,6 +13,10 @@
     "logLevel": "error",
     "selfListen": false
   },
+  "login": {
+    "email": "YOUR_EMAIL",
+    "password": "YOUR_PASSWORD"
+  },
   "externalApi": {
     "url": "https://minhdong.site",
     "key": "YOUR_API_KEY_HERE"

@@ -8,6 +8,11 @@ interface OwnerNoPrefixConfig {
   list?: string[];
 }
 
+interface LoginConfig {
+  email?: string;
+  password?: string;
+}
+
 interface BotConfig {
   bot: {
     prefix: string;
@@ -18,6 +23,7 @@ interface BotConfig {
     commands: string;
   };
   api: ApiOptions;
+  login?: LoginConfig;
   externalApi?: {
     url: string;
     key: string;
@@ -70,6 +76,7 @@ export const ADMIN_IDS = botConfig.permissions.admins || [];
 export const EXTERNAL_API_URL = botConfig.externalApi?.url || '';
 export const EXTERNAL_API_KEY = botConfig.externalApi?.key || '';
 export const DISABLED_COMMANDS = (botConfig.disabledCommands || []).map(name => name.toLowerCase());
+export const LOGIN_CREDENTIALS = botConfig.login;
 
 export const isOwner = (userID: string): boolean => {
   if (!OWNER_ID) {
@@ -87,4 +94,4 @@ export const isAdmin = (userID: string): boolean => {
 };
 
 export { botConfig };
-export type { BotConfig };
+export type { BotConfig, LoginConfig };

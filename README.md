@@ -131,6 +131,45 @@ npm start
 * The bot will automatically create an `appstate.json` file after a successful login.
 
 
+## 📱 Termux 24/7 (pm2 + Termux:Boot)
+
+1. Install basics and pm2:
+```bash
+pkg update && pkg upgrade
+pkg install nodejs-lts git
+npm i -g pm2
+```
+
+2. Install deps and start under pm2 (uses ts-node):
+```bash
+npm install
+pm2 start npm --name vex-bot -- start
+pm2 save
+```
+
+3. Keep awake and auto-restore:
+```bash
+termux-wake-lock
+pm2 resurrect
+```
+
+4. Auto-start on device boot (needs Termux:Boot):
+```bash
+mkdir -p ~/.termux/boot
+cp scripts/termux-boot.sh ~/.termux/boot/start.sh
+chmod +x ~/.termux/boot/start.sh
+```
+After reboot, open Termux once so Termux:Boot can run the script.
+
+5. Useful pm2 commands:
+```bash
+pm2 status
+pm2 logs vex-bot
+pm2 restart vex-bot
+pm2 save
+```
+
+
 
 # Build TypeScript
 

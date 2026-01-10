@@ -1,7 +1,7 @@
 import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import login from '@dongdev/fca-unofficial';
 import * as fs from 'fs';
-import { APPSTATE_PATH, config } from './config';
+import { APPSTATE_PATH, LOGIN_CREDENTIALS, config } from './config';
 import { handleEvent } from './handlers';
 import { loadCommands } from './loader';
 import { logger } from './utils/logger';
@@ -11,7 +11,7 @@ const MAX_RETRY_MS = 5 * 60_000;
 
 const readAppState = (): unknown[] | null => {
   if (!fs.existsSync(APPSTATE_PATH)) {
-    logger.error('Missing appstate.json file');
+    logger.warn('appstate.json not found; will attempt credential login if configured.');
     return null;
   }
 
@@ -28,6 +28,24 @@ const readAppState = (): unknown[] | null => {
     fs.writeFileSync(APPSTATE_PATH, '[]');
     return null;
   }
+};
+
+const getLoginOptions = (): Record<string, unknown> | null => {
+  const appState = readAppState();
+  if (appState) {
+    return { appState: appState as any };
+  }
+
+  const email = LOGIN_CREDENTIALS?.email;
+  const password = LOGIN_CREDENTIALS?.password;
+
+  if (email && password) {
+    logger.warn('Using email/password login because appstate.json is missing or empty. A fresh appstate will be saved after login.');
+    return { email, password };
+  }
+
+  logger.error('No appstate.json or login credentials available. Add cookies or set login credentials in config.json.');
+  return null;
 };
 
 export const startBot = (): void => {
@@ -63,11 +81,14 @@ export const startBot = (): void => {
   };
 
   const loginAndListen = (): void => {
-    const appState = readAppState();
-    if (!appState) return;
+    const loginOptions = getLoginOptions();
+    if (!loginOptions) {
+      scheduleReconnect('No login options available');
+      return;
+    }
 
     // Type definitions expect AppstateData, but runtime accepts raw cookie array; cast to satisfy TS.
-    login({ appState: appState as any }, (err: Error | null, api: IFCAU_API | null) => {
+    login(loginOptions as any, (err: Error | null, api: IFCAU_API | null) => {
       if (err || !api) {
         console.error('❌ Login error:', err);
         logger.error('Login error:', err);

@@ -39,12 +39,22 @@ process.on('unhandledRejection', (reason: unknown) => {
 const showBanner = (): void => {
 };
 
+// Periodically exit so a process manager (pm2/Termux) restarts the bot.
+const scheduleAutoRestart = (): void => {
+  const TEN_MINUTES_MS = 10 * 60 * 1000;
+  setInterval(() => {
+    logger.warn('Auto restart triggered (10 minutes).');
+    process.exit(0);
+  }, TEN_MINUTES_MS);
+};
+
 const main = async (): Promise<void> => {
   try {
     showBanner();
     const { connectDB } = await import('../database/index');
     await connectDB();
     startBot();
+    scheduleAutoRestart();
   } catch (error) {
     console.error('ERROR:', error);
     logger.error('Bot startup error:', error);
