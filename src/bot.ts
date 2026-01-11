@@ -34,7 +34,8 @@ const readAppState = (): unknown[] | null => {
     }
 
     if (!isLikelyAppState(parsed)) {
-      logger.warn('appstate.json does not look like valid appstate cookies. Ignoring the file.');
+      logger.warn('appstate.json does not look like valid appstate cookies. Clearing file and falling back.');
+      fs.writeFileSync(APPSTATE_PATH, '[]');
       return null;
     }
 
