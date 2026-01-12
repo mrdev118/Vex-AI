@@ -76,6 +76,32 @@ const buildHandshakePacket = (host: string, port: number): Buffer => {
 
 const buildStatusRequestPacket = (): Buffer => Buffer.concat([writeVarInt(1), writeVarInt(0x00)]);
 
+const parseBedrockStatus = (msg: Buffer): BedrockServerStatus | null => {
+  const raw = msg.toString('utf8');
+
+  // The Bedrock pong payload can include binary bytes before the ASCII data; trim to the MCPE marker so splits land correctly.
+  const start = raw.indexOf('MCPE;');
+  const payload = start >= 0 ? raw.slice(start) : raw;
+  const parts = payload.split(';');
+
+  if (parts.length < 6) {
+    return null;
+  }
+
+  const online = Number.parseInt(parts[4], 10);
+  const max = Number.parseInt(parts[5], 10);
+
+  return {
+    online: true,
+    motd: parts[1] || undefined,
+    players: {
+      online: Number.isFinite(online) ? online : 0,
+      max: Number.isFinite(max) ? max : 0
+    },
+    version: parts[3] || undefined
+  };
+};
+
 const tryParseStatusResponse = (buffer: Buffer) => {
   let offset = 0;
 
@@ -193,22 +219,9 @@ export const getBedrockServerStatus = (
 
     socket.on('message', (msg) => {
       try {
-        const response = msg.toString('utf8');
-        const parts = response.split(';');
-
-        if (parts.length >= 6) {
-          const online = parseInt(parts[4], 10);
-          const max = parseInt(parts[5], 10);
-
-          finish({
-            online: true,
-            motd: parts[1] || undefined,
-            players: {
-              online: Number.isNaN(online) ? 0 : online,
-              max: Number.isNaN(max) ? 0 : max
-            },
-            version: parts[3] || undefined
-          });
+        const parsed = parseBedrockStatus(msg);
+        if (parsed) {
+          finish(parsed);
         } else {
           finish({ online: false, error: 'Invalid response' });
         }

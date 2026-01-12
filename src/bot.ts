@@ -5,9 +5,133 @@ import { APPSTATE_PATH, LOGIN_CREDENTIALS, config } from './config';
 import { handleEvent } from './handlers';
 import { loadCommands } from './loader';
 import { logger } from './utils/logger';
+import { Threads } from '../database/controllers/threadController';
 
 const BASE_RETRY_MS = 5_000;
 const MAX_RETRY_MS = 5 * 60_000;
+
+// Helper: get thread list (groups only)
+const getGroupThreads = (api: IFCAU_API, limit = 100): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    api.getThreadList(limit, null, ['INBOX'], (err, threads) => {
+      if (err) return reject(err);
+      resolve((threads || []).filter((t: any) => t?.isGroup));
+    });
+  });
+};
+
+// Helper: get thread info with participants
+const getThreadInfoSafe = (api: IFCAU_API, threadID: string): Promise<any | null> => {
+  return new Promise((resolve) => {
+    api.getThreadInfo(threadID, (err: Error | null, info: any) => {
+      if (err || !info) return resolve(null);
+      resolve(info);
+    });
+  });
+};
+
+// Helper: remove a member and optionally notify the group
+const removeMember = (api: IFCAU_API, threadID: string, userID: string, reason: string): Promise<void> => {
+  return new Promise((resolve) => {
+    api.removeUserFromGroup(userID, threadID, (err) => {
+      if (err) {
+        logger.warn(`Startup ban scan: failed to kick ${userID} in ${threadID}:`, err);
+        return resolve();
+      }
+
+      api.sendMessage(`🚫 Auto-kick: ${userID} is banned. ${reason}`, threadID, () => resolve());
+    });
+  });
+};
+
+// Helper: fetch user display name for nicer messages
+const getUserName = (api: IFCAU_API, userID: string): Promise<string> => {
+  return new Promise((resolve) => {
+    api.getUserInfo([userID], (err: Error | null, info: Record<string, { name?: string }> | null) => {
+      if (err || !info) return resolve(userID);
+      resolve(info[userID]?.name || userID);
+    });
+  });
+};
+
+const refreshBanState = async (threadID: string): Promise<{ banned: Set<string>; tempBans: Record<string, number>; now: number }> => {
+  const threadData = await Threads.getData(threadID);
+
+  let bannedUsers: string[] = [];
+  try {
+    bannedUsers = JSON.parse(threadData.bannedUsers || '[]').map((id: any) => String(id));
+  } catch {
+    bannedUsers = [];
+  }
+
+  const settings = await Threads.getSettings(threadID);
+  const rawTempBans = (settings as any).tempBans || {};
+  const now = Date.now();
+  const tempBans: Record<string, number> = {};
+  let changed = false;
+
+  for (const [id, until] of Object.entries(rawTempBans)) {
+    if (typeof until === 'number' && until > now) {
+      tempBans[id] = until;
+    } else {
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    (settings as any).tempBans = tempBans;
+    await Threads.setSettings(threadID, settings);
+  }
+
+  return { banned: new Set(bannedUsers), tempBans, now };
+};
+
+const enforceBansInThread = async (api: IFCAU_API, threadID: string, participantIDs: string[]): Promise<void> => {
+  const { banned, tempBans, now } = await refreshBanState(threadID);
+  const selfID = String(api.getCurrentUserID());
+
+  if (banned.size === 0 && Object.keys(tempBans).length === 0) return;
+
+  for (const rawID of participantIDs) {
+    const userID = String(rawID || '');
+    if (!userID || userID === selfID) continue;
+
+    if (banned.has(userID)) {
+      const name = await getUserName(api, userID);
+      await removeMember(api, threadID, userID, `${name} is permanently banned.`);
+      continue;
+    }
+
+    const until = tempBans[userID];
+    if (until && until > now) {
+      const minutesLeft = Math.max(1, Math.ceil((until - now) / (60 * 1000)));
+      const name = await getUserName(api, userID);
+      await removeMember(api, threadID, userID, `${name} is temporarily banned (${minutesLeft} minute(s) remaining).`);
+    }
+  }
+};
+
+const startupBanScan = async (api: IFCAU_API): Promise<void> => {
+  try {
+    logger.info('Startup ban scan: fetching group list...');
+    const groups = await getGroupThreads(api);
+
+    for (const group of groups) {
+      const threadID = String(group.threadID || group.thread_id || '');
+      if (!threadID) continue;
+
+      const info = await getThreadInfoSafe(api, threadID);
+      const participantIDs = info?.participantIDs || [];
+      if (!participantIDs.length) continue;
+
+      await enforceBansInThread(api, threadID, participantIDs);
+    }
+
+    logger.info('Startup ban scan completed.');
+  } catch (error) {
+    logger.warn('Startup ban scan failed:', error);
+  }
+};
 
 const isLikelyAppState = (value: unknown): value is unknown[] => {
   return (
@@ -129,6 +253,9 @@ export const startBot = (): void => {
 
         fs.writeFileSync(APPSTATE_PATH, JSON.stringify(api.getAppState(), null, 2));
         api.setOptions(config);
+
+        // Run in background so we don't block event listening
+        startupBanScan(api).catch(err => logger.warn('Startup ban scan error:', err));
 
         const stop = api.listenMqtt(async (listenErr, event) => {
           if (listenErr) {
