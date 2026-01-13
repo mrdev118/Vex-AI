@@ -10,14 +10,47 @@ import { Threads } from '../database/controllers/threadController';
 const BASE_RETRY_MS = 5_000;
 const MAX_RETRY_MS = 5 * 60_000;
 
-// Helper: get thread list (groups only)
-const getGroupThreads = (api: IFCAU_API, limit = 100): Promise<any[]> => {
-  return new Promise((resolve, reject) => {
-    api.getThreadList(limit, null, ['INBOX'], (err, threads) => {
-      if (err) return reject(err);
-      resolve((threads || []).filter((t: any) => t?.isGroup));
-    });
-  });
+type ThreadSummary = { threadID: string; name?: string };
+
+const THREAD_TAGS: ReadonlyArray<'INBOX' | 'OTHER' | 'PENDING' | 'ARCHIVED'> = ['INBOX', 'OTHER', 'PENDING', 'ARCHIVED'];
+
+// Helper: fetch all group threads with pagination across all tags
+const getGroupThreads = async (api: IFCAU_API, pageSize = 25, maxPagesPerTag = 10): Promise<ThreadSummary[]> => {
+  const seen = new Set<string>();
+  const results: ThreadSummary[] = [];
+
+  for (const tag of THREAD_TAGS) {
+    let cursor: number | null = null;
+
+    for (let page = 0; page < maxPagesPerTag; page++) {
+      const batch = await new Promise<any[]>((resolve, reject) => {
+        api.getThreadList(pageSize, cursor, [tag], (err, threads) => {
+          if (err) return reject(err);
+          resolve(threads || []);
+        });
+      });
+
+      if (!batch.length) break;
+
+      for (const raw of batch) {
+        if (!raw?.isGroup) continue;
+        const id = String(raw.threadID || raw.thread_id || '');
+        if (!id || seen.has(id)) continue;
+
+        seen.add(id);
+        results.push({ threadID: id, name: raw.name });
+      }
+
+      if (batch.length < pageSize) break;
+
+      const last = batch[batch.length - 1] as any;
+      const nextCursor = Number(last?.timestamp ?? last?.lastMessageTimestamp ?? last?.messageCount);
+      if (!Number.isFinite(nextCursor)) break;
+      cursor = nextCursor;
+    }
+  }
+
+  return results;
 };
 
 // Helper: get thread info with participants
@@ -116,13 +149,18 @@ const startupBanScan = async (api: IFCAU_API): Promise<void> => {
     logger.info('Startup ban scan: fetching group list...');
     const groups = await getGroupThreads(api);
 
+    logger.info(`Startup ban scan: checking ${groups.length} group(s)`);
+
     for (const group of groups) {
       const threadID = String(group.threadID || group.thread_id || '');
       if (!threadID) continue;
 
       const info = await getThreadInfoSafe(api, threadID);
       const participantIDs = info?.participantIDs || [];
-      if (!participantIDs.length) continue;
+      if (!participantIDs.length) {
+        logger.warn(`Startup ban scan: no participants returned for ${threadID} (${group.name || 'unknown'})`);
+        continue;
+      }
 
       await enforceBansInThread(api, threadID, participantIDs);
     }
