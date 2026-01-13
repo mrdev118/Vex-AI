@@ -63,6 +63,37 @@ const getThreadInfoSafe = (api: IFCAU_API, threadID: string): Promise<any | null
   });
 };
 
+// Helper: normalize participant IDs from multiple shapes returned by the API
+const extractParticipantIDs = (info: any): { ids: string[]; source: string } => {
+  const normalize = (raw: any[]): string[] =>
+    (raw || [])
+      .map(id => String(id || '').trim())
+      .filter(Boolean);
+
+  const fromParticipantIDs = Array.isArray(info?.participantIDs) ? normalize(info.participantIDs) : [];
+  if (fromParticipantIDs.length) {
+    return { ids: fromParticipantIDs, source: 'participantIDs' };
+  }
+
+  if (Array.isArray(info?.participants)) {
+    const candidate = normalize(
+      info.participants.map((p: any) => p?.userFbId ?? p?.userFbID ?? p?.userID ?? p?.id ?? p?.uid)
+    );
+    if (candidate.length) {
+      return { ids: candidate, source: 'participants' };
+    }
+  }
+
+  if (info?.userInfo && typeof info.userInfo === 'object') {
+    const candidate = normalize(Object.keys(info.userInfo));
+    if (candidate.length) {
+      return { ids: candidate, source: 'userInfoKeys' };
+    }
+  }
+
+  return { ids: [], source: 'none' };
+};
+
 // Helper: remove a member and optionally notify the group
 const removeMember = (api: IFCAU_API, threadID: string, userID: string, reason: string): Promise<void> => {
   return new Promise((resolve) => {
@@ -156,12 +187,18 @@ const startupBanScan = async (api: IFCAU_API): Promise<void> => {
       if (!threadID) continue;
 
       const info = await getThreadInfoSafe(api, threadID);
-      const participantIDs = info?.participantIDs || [];
+      if (!info) {
+        logger.warn(`Startup ban scan: could not load info for ${threadID} (${group.name || 'unknown'})`);
+        continue;
+      }
+
+      const { ids: participantIDs, source } = extractParticipantIDs(info);
       if (!participantIDs.length) {
         logger.warn(`Startup ban scan: no participants returned for ${threadID} (${group.name || 'unknown'})`);
         continue;
       }
 
+      logger.info(`Startup ban scan: enforcing for ${participantIDs.length} participant(s) in ${threadID} via ${source}`);
       await enforceBansInThread(api, threadID, participantIDs);
     }
 
