@@ -152,7 +152,7 @@ const startupBanScan = async (api: IFCAU_API): Promise<void> => {
     logger.info(`Startup ban scan: checking ${groups.length} group(s)`);
 
     for (const group of groups) {
-      const threadID = String(group.threadID || group.thread_id || '');
+      const threadID = String(group.threadID || '');
       if (!threadID) continue;
 
       const info = await getThreadInfoSafe(api, threadID);
