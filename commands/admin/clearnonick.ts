@@ -36,23 +36,35 @@ const command: ICommand = {
     const nicknames: Record<string, string> = threadInfo.nicknames || {};
     const botID = String(api.getCurrentUserID());
 
+    // Fetch user names up front so we can detect "no nickname" even when the API fills defaults
+    const userInfo = await new Promise<Record<string, { name?: string }>>((resolve) => {
+      api.getUserInfo(participantIDs, (_err, info) => resolve((info as any) || {}));
+    });
+
+    const hasCustomNickname = (id: string): boolean => {
+      if (!Object.prototype.hasOwnProperty.call(nicknames, id)) return false;
+
+      const nickname = nicknames[id];
+      if (typeof nickname !== 'string' || nickname.trim() === '') return false;
+
+      const profileName = userInfo[id]?.name?.trim();
+      if (!profileName) return true; // no baseline to compare against
+
+      return nickname.trim().toLowerCase() !== profileName.toLowerCase();
+    };
+
     const candidates = participantIDs.filter((id) => {
       if (!id) return false;
       if (id === botID) return false;
       if (isOwner(id) || id === OWNER_ID) return false;
       if (adminIDs.includes(id)) return false;
-      const nickname = nicknames[id];
-      return !nickname || nickname.trim() === '';
+      return !hasCustomNickname(id);
     });
 
     if (candidates.length === 0) {
-      await send("✅ Everyone already has a nickname. No users were removed.");
+      await send("✅ No removable members without custom nicknames were found.");
       return;
     }
-
-    const userInfo = await new Promise<Record<string, { name?: string }>>((resolve) => {
-      api.getUserInfo(candidates, (_err, info) => resolve((info as any) || {}));
-    });
 
     const removed: string[] = [];
     const failed: { id: string; reason: string }[] = [];
