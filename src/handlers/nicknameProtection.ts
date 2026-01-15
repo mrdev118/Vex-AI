@@ -2,11 +2,15 @@ import type { IFCAU_API } from '@dongdev/fca-unofficial';
 import { ThreadEventType } from '../../types';
 import { logger } from '../utils/logger';
 import { isGroupAdmin } from '../utils/permissions';
+import { isOwner } from '../config';
 
 const PROTECTED_GROUP_NAME = '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 | Season 1 | Bedrock Only';
 
 // Tracks the last known nickname per thread/user so we can restore it after blocked changes
 const nicknameCache = new Map<string, Map<string, string>>();
+
+// Tracks reverts initiated by the bot to avoid re-triggering on the bot's own nickname changes
+const botRevertInProgress = new Set<string>();
 
 // Cache to track recent nickname changes to prevent loops
 const recentChanges = new Map<string, number>();
@@ -85,6 +89,8 @@ export const handleNicknameProtection = async (
 
   const threadID = String(event.threadID);
   const author = String(event.author ?? '');
+  const botID = String(api.getCurrentUserID?.() ?? '');
+  const botRevertKey = (participantID: string): string => `${threadID}-${participantID}`;
 
   // Feature 1: Protect group chat name - only admins can change it
   if (event.logMessageType === 'log:thread-name') {
@@ -157,18 +163,36 @@ export const handleNicknameProtection = async (
         return;
       }
 
-      const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+      // Ignore changes performed by the bot itself (e.g., when reverting nicknames)
+      if (author && botID && author === botID) {
+        setCachedNickname(threadID, targetUserID, nickname || '');
+        botRevertInProgress.delete(botRevertKey(targetUserID));
+        return;
+      }
 
-      if (!isAuthorAdmin) {
+      // If this event is part of a bot-initiated revert, skip handling
+      if (botRevertInProgress.has(botRevertKey(targetUserID))) {
+        setCachedNickname(threadID, targetUserID, nickname || '');
+        botRevertInProgress.delete(botRevertKey(targetUserID));
+        return;
+      }
+
+      const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+      const isAuthorOwner = isOwner(author);
+
+      if (!isAuthorAdmin && !isAuthorOwner) {
         const changeKey = `nickname-${threadID}-${targetUserID}-${author}`;
 
         if (canMakeChange(changeKey)) {
           const previousNickname = getCachedNickname(threadID, targetUserID);
           const revertNickname = previousNickname ?? '';
 
+          botRevertInProgress.add(botRevertKey(targetUserID));
+
           api.changeNickname(revertNickname, threadID, targetUserID, (err) => {
             if (err) {
               logger.error('Error reverting nickname:', err);
+              botRevertInProgress.delete(botRevertKey(targetUserID));
               return;
             }
 
@@ -196,7 +220,7 @@ export const handleNicknameProtection = async (
           });
         }
       } else {
-        // Admins are allowed; update cache so we remember the new nickname
+        // Admins/owners are allowed; update cache so we remember the new nickname
         setCachedNickname(threadID, targetUserID, nickname || '');
       }
     } catch (error) {

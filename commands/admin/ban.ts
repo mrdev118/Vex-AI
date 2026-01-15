@@ -2,6 +2,34 @@ import { ICommand, IRunParams } from '../../types';
 import { Threads } from '../../database/controllers/threadController';
 import Thread from '../../database/models/Thread';
 
+const extractMentionedUserID = (mentions: any): string | null => {
+    if (!mentions) return null;
+
+    if (Array.isArray(mentions)) {
+        const first = mentions[0];
+        if (!first) return null;
+        if (typeof first === 'string') return first;
+        if (typeof first === 'object') {
+            if (first.id) return String(first.id);
+            if (first.uid) return String(first.uid);
+        }
+        return null;
+    }
+
+    const mentionKeys = Object.keys(mentions);
+    if (mentionKeys.length === 0) return null;
+
+    const firstKey = mentionKeys[0];
+    const firstValue = (mentions as any)[firstKey];
+
+    if (firstValue && typeof firstValue === 'object') {
+        if (firstValue.id) return String(firstValue.id);
+        if (firstValue.uid) return String(firstValue.uid);
+    }
+
+    return firstKey || null;
+};
+
 const command: ICommand = {
     config: {
         name: "ban",
@@ -33,12 +61,17 @@ const command: ICommand = {
         if (eventWithReply.messageReply) {
             targetID = eventWithReply.messageReply.senderID;
         }
-        // Check for mentions
-        else if (event.mentions && Object.keys(event.mentions).length > 0) {
-            targetID = Object.keys(event.mentions)[0];
+
+        // Check for mentions if not found via reply
+        if (!targetID) {
+            const mentioned = extractMentionedUserID((event as any).mentions);
+            if (mentioned) {
+                targetID = mentioned;
+            }
         }
+
         // Check args for userID
-        else if (args[0]) {
+        if (!targetID && args[0]) {
             targetID = args[0].replace('@', '').trim();
         }
 

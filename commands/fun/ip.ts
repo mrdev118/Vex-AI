@@ -6,20 +6,15 @@ const SERVER_HOST = "vexonsmp.sereinhost.com";
 const SERVER_PORT = 25581;
 
 const formatStatusMessage = (status: Awaited<ReturnType<typeof getBedrockServerStatus>>): string => {
-  const statusLine = status.online ? "🟢 ONLINE" : "🔴 OFFLINE";
-  const playersLine = status.players ? `${status.players.online}/${status.players.max}` : 'Unknown';
+  const statusLine = status.online ? '🟢 ONLINE' : '🔴 OFFLINE';
   const versionLine = status.version || 'Unknown';
-  const footer = status.online ? '🔥 Server is active! Join now!' : '⚠️ Server appears offline. Try again soon.';
 
   return [
-    '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗿𝘃𝗲𝗿 𝗦𝘁𝗮𝘁𝘂𝘀',
+    '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗿𝘃𝗲𝗿 𝗜𝗻𝗳𝗼',
     '',
     `✅ Status: ${statusLine}`,
-    `👥 Players: ${playersLine}`,
-    `📡 IP: ${SERVER_HOST}:${SERVER_PORT}`,
-    `🎮 Version: ${versionLine}`,
-    '',
-    footer
+    `📡 Address: ${SERVER_HOST}:${SERVER_PORT}`,
+    `🎮 Version: ${versionLine}`
   ].join('\n');
 };
 
