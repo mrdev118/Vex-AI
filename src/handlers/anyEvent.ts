@@ -1,11 +1,11 @@
-import type { IFCAU_API, IFCAU_ListenMessage } from '@dongdev/fca-unofficial';
+import type { IFCAU_API, IFCAU_Attachment, IFCAU_ListenMessage } from '@dongdev/fca-unofficial';
 import { MessageEventType } from '../../types';
 import { Threads } from '../../database/controllers/threadController';
 import { isAdmin, isOwner } from '../config';
 import { logger } from '../utils/logger';
 
 type SpamEntry = {
-  lastMessage: string;
+  lastSignature: string;
   count: number;
 };
 
@@ -35,7 +35,23 @@ const saveTempBans = async (threadID: string, settings: Record<string, any>, tem
   await Threads.setSettings(threadID, settings);
 };
 
-const normalizeMessage = (text: string): string => text.trim().toLowerCase().replace(/\s+/g, ' ');
+const normalizeText = (text: string): string => text.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const normalizeAttachment = (attachment: IFCAU_Attachment): string => {
+  const id = attachment.ID || '';
+  const type = attachment.type?.toLowerCase?.() || 'unknown';
+  return id ? `${type}:${id}` : type;
+};
+
+const buildMessageSignature = (event: MessageEventType): string | null => {
+  const normalizedBody = normalizeText(event.body || '');
+  const attachmentSignature = event.attachments?.length
+    ? event.attachments.map(normalizeAttachment).filter(Boolean).join('|')
+    : '';
+
+  const parts = [normalizedBody, attachmentSignature].filter(Boolean);
+  return parts.length ? parts.join('||') : null;
+};
 
 const getSpamEntry = (threadID: string, userID: string): SpamEntry => {
   let threadMap = spamTracker.get(threadID);
@@ -46,7 +62,7 @@ const getSpamEntry = (threadID: string, userID: string): SpamEntry => {
 
   let entry = threadMap.get(userID);
   if (!entry) {
-    entry = { lastMessage: '', count: 0 };
+    entry = { lastSignature: '', count: 0 };
     threadMap.set(userID, entry);
   }
 
@@ -62,32 +78,29 @@ export const handleAnyEvent = async (
   const msgEvent = event as MessageEventType;
   const threadID = String(msgEvent.threadID || '');
   const userID = String(msgEvent.senderID || '');
-  const body = (msgEvent.body || '').trim();
 
   if (!threadID || !userID || !msgEvent.isGroup) return;
-  if (!body) return;
-
   // Do not police bot admins/owners or the bot itself
   if (isOwner(userID) || isAdmin(userID) || userID === String(api.getCurrentUserID())) {
     return;
   }
 
-  const normalized = normalizeMessage(body);
-  if (!normalized) return;
+  const signature = buildMessageSignature(msgEvent);
+  if (!signature) return;
 
   const entry = getSpamEntry(threadID, userID);
 
-  if (entry.lastMessage === normalized) {
+  if (entry.lastSignature === signature) {
     entry.count += 1;
   } else {
-    entry.lastMessage = normalized;
+    entry.lastSignature = signature;
     entry.count = 1;
   }
 
   if (entry.count >= 5) {
     // Reset the tracker for this user after action
     entry.count = 0;
-    entry.lastMessage = '';
+    entry.lastSignature = '';
 
     const removalError = await new Promise<Error | null>((resolve) => {
       api.removeUserFromGroup(userID, threadID, (err) => resolve(err || null));
@@ -105,7 +118,7 @@ export const handleAnyEvent = async (
     await saveTempBans(threadID, settings, tempBans);
 
     api.sendMessage(
-      `🚫 Anti-spam: Removed user ${userID} for sending the same message 5 times. Temporary ban: 1 hour.`,
+      `🚫 Anti-spam: Removed user ${userID} for sending the same content 5 times. Temporary ban: 1 hour.`,
       threadID
     );
     logger.info(`Anti-spam: kicked ${userID} from ${threadID} and temp-banned for 1 hour (until ${new Date(banUntil).toISOString()})`);
