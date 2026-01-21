@@ -65,7 +65,7 @@ export const handleEvent = async (
         const connectedPath = path.join(process.cwd(), 'attached_assets/connected.gif');
         if (fs.existsSync(connectedPath)) {
           api.sendMessage({
-            body: `✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`,
+            body: `✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: 5.78.23.54:25144\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`,
             attachment: fs.createReadStream(connectedPath)
           }, threadID, (err) => {
             if (err) {
@@ -76,7 +76,7 @@ export const handleEvent = async (
           });
         } else {
           logger.warn(`Connected image not found at ${connectedPath}`);
-          api.sendMessage(`✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: vexonsmp.sereinhost.com:25581\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`, threadID);
+          api.sendMessage(`✅ 𝗕𝗢𝗧 𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗\n\nHello! I'm 𝗩𝗲𝘅 𝗔𝗜. I'm here to help manage your group with amazing commands and features.\n\nUse ".help" to see all available commands!\n\nServer IP: 5.78.23.54:25144\n\n💡 Tip: Group admins can manually set my nickname to "𝗩𝗲𝘅 𝗔𝗜 [ . ]"`, threadID);
         }
         // Don't return here - continue to process other participants if any
       }

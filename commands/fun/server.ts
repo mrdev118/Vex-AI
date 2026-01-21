@@ -1,8 +1,8 @@
 import { ICommand, IRunParams } from '../../types';
 import { getBedrockServerStatus } from '../../src/utils/serverStatus';
 
-const SERVER_HOST = 'vexonsmp.sereinhost.com';
-const SERVER_PORT = 25581;
+const SERVER_HOST = '5.78.23.54';
+const SERVER_PORT = 25144;
 
 const formatStatusMessage = (status: Awaited<ReturnType<typeof getBedrockServerStatus>>): string => {
   if (status.online) {

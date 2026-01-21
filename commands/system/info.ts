@@ -2,8 +2,8 @@ import { ICommand, IRunParams } from '../../types';
 import { ADMIN_IDS, BOT_NAME, OWNER_ID, PREFIX } from '../../src/config';
 import { getBedrockServerStatus } from '../../src/utils/serverStatus';
 
-const SERVER_HOST = 'vexonsmp.sereinhost.com';
-const SERVER_PORT = 25581;
+const SERVER_HOST = '5.78.23.54';
+const SERVER_PORT = 25144;
 
 const getThreadInfo = (api: any, threadID: string): Promise<any | null> => {
   return new Promise((resolve) => {
