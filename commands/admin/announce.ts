@@ -30,7 +30,9 @@ const command: ICommand = {
         }
 
         // Filter only group chats
-        const groupChats = threads.filter((thread: any) => thread.isGroup);
+        const groupChats = threads
+          .filter((thread: any) => thread.isGroup)
+          .filter((thread: any) => thread.isSubscribed !== false && !thread.isArchived);
 
         if (groupChats.length === 0) {
           send("❌ No group chats found!");

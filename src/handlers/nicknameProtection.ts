@@ -98,10 +98,11 @@ export const handleNicknameProtection = async (
       const logData = (event as any).logMessageData;
       const newName = logData?.name || '';
       
-      // Check if the author is a group admin
+      // Check if the author is a group admin or bot owner
       const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+      const isAuthorOwner = isOwner(author);
       
-      if (!isAuthorAdmin) {
+      if (!isAuthorAdmin && !isAuthorOwner) {
         // Non-admin tried to change the group name
         const changeKey = `thread-name-${threadID}`;
         

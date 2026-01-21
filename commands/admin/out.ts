@@ -23,7 +23,9 @@ const command: ICommand = {
           return;
         }
 
-        const groups = threads.filter((thread: any) => thread.isGroup);
+        const groups = threads
+          .filter((thread: any) => thread.isGroup)
+          .filter((thread: any) => thread.isSubscribed !== false && !thread.isArchived);
 
         if (groups.length === 0) {
           send("❌ No groups found.");
