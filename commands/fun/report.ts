@@ -253,4 +253,4 @@ const command: ICommand = {
     }
 };
 
-export default command;
+export = command;
