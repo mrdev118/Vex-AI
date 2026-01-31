@@ -1,6 +1,6 @@
 import { ICommand, IRunParams } from '../../types';
 import { Threads } from '../../database/controllers/threadController';
-import { clearProtectionCache } from '../../src/handlers/nicknameProtection';
+import { clearProtectionCache, primeProtectionCache, PROTECTED_GROUP_NAME } from '../../src/handlers/nicknameProtection';
 import { logger } from '../../src/utils/logger';
 
 const extractThemeFromInfo = (info: any): string => {
@@ -55,7 +55,7 @@ const command: ICommand = {
       return;
     }
 
-    const name = (info.threadName || info.name || '').trim();
+    const name = (info.threadName || info.name || PROTECTED_GROUP_NAME).trim();
     const theme = extractThemeFromInfo(info);
     const photo = extractPhotoFromInfo(info);
 
@@ -67,9 +67,10 @@ const command: ICommand = {
 
     await Threads.setSettings(threadID, settings);
     clearProtectionCache(threadID);
+    primeProtectionCache(threadID, { name, theme });
 
     const parts = [
-      name ? `📝 Name saved` : '📝 Name missing',
+      name ? `📝 Name saved` : '📝 Name missing (defaulted)' ,
       theme ? `🎨 Theme saved` : '🎨 Theme missing',
       photo ? `🖼️ Photo saved` : '🖼️ Photo missing'
     ];

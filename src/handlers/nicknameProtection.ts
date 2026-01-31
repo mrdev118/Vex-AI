@@ -39,6 +39,14 @@ export const clearProtectionCache = (threadID: string): void => {
   protectedNicknamesCache.delete(threadID);
 };
 
+export const primeProtectionCache = (threadID: string, targets: Partial<ProtectionTargets>): void => {
+  const current = protectionCache.get(threadID) || { name: '', theme: '' };
+  protectionCache.set(threadID, {
+    name: targets.name ?? current.name,
+    theme: targets.theme ?? current.theme,
+  });
+};
+
 const normalizeNickname = (value?: string): string => (value || '').trim();
 const normalizeTheme = (value?: string): string => (value || '').trim().toLowerCase();
 
@@ -300,6 +308,15 @@ const getCachedNickname = (threadID: string, userID: string): string => {
   return nicknameCache.get(threadID)?.get(userID) ?? '';
 };
 
+const ensureNicknameBaseline = async (api: IFCAU_API, threadID: string, userID: string): Promise<void> => {
+  const cached = getCachedNickname(threadID, userID);
+  const protectedValue = await getProtectedNicknameValue(threadID, userID);
+  if (cached || protectedValue) return;
+
+  // Force refresh nicknames to seed baseline if missing
+  await ensureThreadNicknamesCached(api, threadID, true);
+};
+
 const setCachedNickname = (threadID: string, userID: string, nickname: string): void => {
   if (!nicknameCache.has(threadID)) {
     nicknameCache.set(threadID, new Map());
@@ -484,6 +501,9 @@ export const handleNicknameProtection = async (
       const nickname = normalizeNickname(logData?.nickname || '');
 
       if (!targetUserID) return;
+
+      // Ensure we have a baseline before deciding
+      await ensureNicknameBaseline(api, threadID, targetUserID);
 
       // If the user is changing their own nickname, accept and update cache
       if (author === targetUserID) {
