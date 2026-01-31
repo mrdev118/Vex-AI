@@ -22,10 +22,10 @@
   "author": "DongDev",
   "license": "MIT",
   "dependencies": {
-    "@dongdev/fca-unofficial": "^3.0.22",
+    "@dongdev/fca-unofficial": "^3.0.23",
     "@google/genai": "^0.3.0",
-    "express": "^5.2.1",
     "axios": "^1.7.7",
+    "express": "^5.2.1",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7"
   },

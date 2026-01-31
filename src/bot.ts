@@ -3,6 +3,7 @@ import login from '@dongdev/fca-unofficial';
 import * as fs from 'fs';
 import { APPSTATE_PATH, LOGIN_CREDENTIALS, config } from './config';
 import { handleEvent } from './handlers';
+import { enforceProtectionSnapshot } from './handlers/nicknameProtection';
 import { loadCommands } from './loader';
 import { logger } from './utils/logger';
 import { Threads } from '../database/controllers/threadController';
@@ -208,6 +209,32 @@ const startupBanScan = async (api: IFCAU_API): Promise<void> => {
   }
 };
 
+const startupProtectionScan = async (api: IFCAU_API): Promise<void> => {
+  try {
+    logger.info('Startup protection scan: fetching group list...');
+    const groups = await getGroupThreads(api);
+
+    logger.info(`Startup protection scan: checking ${groups.length} group(s)`);
+
+    for (const group of groups) {
+      const threadID = String(group.threadID || '');
+      if (!threadID) continue;
+
+      const info = await getThreadInfoSafe(api, threadID);
+      if (!info) {
+        logger.warn(`Startup protection scan: could not load info for ${threadID} (${group.name || 'unknown'})`);
+        continue;
+      }
+
+      await enforceProtectionSnapshot(api, threadID, info, false);
+    }
+
+    logger.info('Startup protection scan completed.');
+  } catch (error) {
+    logger.warn('Startup protection scan failed:', error);
+  }
+};
+
 const isLikelyAppState = (value: unknown): value is unknown[] => {
   return (
     Array.isArray(value) &&
@@ -331,6 +358,7 @@ export const startBot = (): void => {
 
         // Run in background so we don't block event listening
         startupBanScan(api).catch(err => logger.warn('Startup ban scan error:', err));
+        startupProtectionScan(api).catch(err => logger.warn('Startup protection scan error:', err));
 
         const stop = api.listenMqtt(async (listenErr, event) => {
           if (listenErr) {

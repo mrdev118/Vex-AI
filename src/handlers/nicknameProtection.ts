@@ -3,8 +3,18 @@ import { ThreadEventType } from '../../types';
 import { logger } from '../utils/logger';
 import { isGroupAdmin } from '../utils/permissions';
 import { isOwner } from '../config';
+import { Threads } from '../../database/controllers/threadController';
 
-const PROTECTED_GROUP_NAME = '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 | Season 1 | Bedrock Only';
+export const PROTECTED_GROUP_NAME = '𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 | Season 1 | Bedrock Only';
+const PROTECTED_THREAD_THEME = '#0084ff';
+
+type ProtectionTargets = {
+  name: string;
+  theme?: string;
+};
+
+// Cache protected targets per thread to avoid repeated DB hits
+const protectionCache = new Map<string, ProtectionTargets>();
 
 // Tracks the last known nickname per thread/user so we can restore it after blocked changes
 const nicknameCache = new Map<string, Map<string, string>>();
@@ -15,6 +25,93 @@ const botRevertInProgress = new Set<string>();
 // Cache to track recent nickname changes to prevent loops
 const recentChanges = new Map<string, number>();
 const CHANGE_COOLDOWN = 3000; // 3 seconds cooldown
+
+const normalizeTheme = (value?: string): string => (value || '').trim().toLowerCase();
+
+const extractThemeFromInfo = (info: any): string | undefined => {
+  const themeCandidate =
+    info?.themeID ||
+    info?.theme_id ||
+    info?.theme_color ||
+    info?.threadTheme ||
+    info?.threadColor ||
+    info?.color;
+
+  const theme = typeof themeCandidate === 'string' ? themeCandidate : undefined;
+  return theme ? theme.trim() : undefined;
+};
+
+const getProtectionTargets = async (threadID: string, threadInfo?: any): Promise<ProtectionTargets> => {
+  const cached = protectionCache.get(threadID);
+  if (cached) return cached;
+
+  const settings = await Threads.getSettings(threadID);
+
+  let protectedName = typeof (settings as any).protectedName === 'string'
+    ? (settings as any).protectedName.trim()
+    : '';
+
+  let protectedTheme = typeof (settings as any).protectedTheme === 'string'
+    ? (settings as any).protectedTheme.trim()
+    : '';
+
+  let shouldPersist = false;
+
+  if (!protectedName) {
+    protectedName = PROTECTED_GROUP_NAME;
+    (settings as any).protectedName = protectedName;
+    shouldPersist = true;
+  }
+
+  if (!protectedTheme) {
+    const themeFromInfo = extractThemeFromInfo(threadInfo);
+    if (themeFromInfo) {
+      protectedTheme = themeFromInfo;
+      (settings as any).protectedTheme = protectedTheme;
+      shouldPersist = true;
+    } else {
+      // Fall back to default Messenger blue if nothing else is known
+      protectedTheme = PROTECTED_THREAD_THEME;
+    }
+  }
+
+  if (shouldPersist) {
+    await Threads.setSettings(threadID, settings);
+  }
+
+  const targets: ProtectionTargets = { name: protectedName, theme: protectedTheme };
+  protectionCache.set(threadID, targets);
+  return targets;
+};
+
+const updateProtectionTargets = async (
+  threadID: string,
+  updates: Partial<ProtectionTargets>
+): Promise<void> => {
+  const settings = await Threads.getSettings(threadID);
+  const current = await getProtectionTargets(threadID);
+
+  let changed = false;
+
+  if (updates.name && updates.name !== (settings as any).protectedName) {
+    (settings as any).protectedName = updates.name;
+    changed = true;
+  }
+
+  if (updates.theme && updates.theme !== (settings as any).protectedTheme) {
+    (settings as any).protectedTheme = updates.theme;
+    changed = true;
+  }
+
+  if (changed) {
+    await Threads.setSettings(threadID, settings);
+  }
+
+  protectionCache.set(threadID, {
+    name: updates.name || current.name,
+    theme: updates.theme || current.theme,
+  });
+};
 
 // Fetch thread nicknames once per thread so we have a baseline to restore
 const ensureThreadNicknamesCached = async (
@@ -97,6 +194,15 @@ export const handleNicknameProtection = async (
     try {
       const logData = (event as any).logMessageData;
       const newName = logData?.name || '';
+      const { name: targetName } = await getProtectionTargets(threadID);
+
+      if (!targetName || newName === targetName) {
+        return;
+      }
+
+      if (author === botID) {
+        return;
+      }
       
       // Check if the author is a group admin or bot owner
       const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
@@ -108,21 +214,77 @@ export const handleNicknameProtection = async (
         
         if (canMakeChange(changeKey)) {
           // Revert the name back to protected name
-          api.setTitle(PROTECTED_GROUP_NAME, threadID, (err) => {
+          api.setTitle(targetName, threadID, (err) => {
             if (err) {
               logger.error('Error reverting group name:', err);
             } else {
               logger.info(`Group name restored to protected name in ${threadID}`);
               api.sendMessage(
-                `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\nOnly group admins can change the group name.\n\n✅ Group name has been restored to:\n${PROTECTED_GROUP_NAME}\n\n━━━━━━━━━━━━━━━━━━━━`,
+                `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\nOnly group admins can change the group name.\n\n✅ Group name has been restored to:\n${targetName}\n\n━━━━━━━━━━━━━━━━━━━━`,
                 threadID
               );
             }
           });
         }
+      } else if (newName && newName !== targetName) {
+        await updateProtectionTargets(threadID, { name: newName });
       }
     } catch (error) {
       logger.error('Error in group name protection:', error);
+    }
+  }
+
+  // Feature 1b: Protect group chat theme/color - only admins can change it
+  if (event.logMessageType === 'log:thread-color') {
+    try {
+      const logData = (event as any).logMessageData;
+      const newTheme = logData?.theme_color || logData?.theme_id || logData?.themeID || '';
+      const { theme: targetTheme } = await getProtectionTargets(threadID, logData);
+
+      if (!targetTheme) return;
+
+      if (normalizeTheme(newTheme) === normalizeTheme(targetTheme)) {
+        return;
+      }
+
+      if (author === botID) {
+        return;
+      }
+
+      const isAuthorAdmin = await isGroupAdmin(api, author, threadID);
+      const isAuthorOwner = isOwner(author);
+
+      if (!isAuthorAdmin && !isAuthorOwner) {
+        const changeKey = `thread-theme-${threadID}`;
+
+        if (canMakeChange(changeKey) && normalizeTheme(newTheme) !== normalizeTheme(targetTheme)) {
+          const changeThreadColor = (api as any).changeThreadColor as
+            | ((color: string, id: string, cb: (err: any) => void) => void)
+            | undefined;
+
+          if (!changeThreadColor) {
+            logger.warn('API does not support changeThreadColor; cannot restore theme');
+            return;
+          }
+
+          changeThreadColor(targetTheme, threadID, (err: any) => {
+            if (err) {
+              logger.error('Error reverting group theme:', err);
+              return;
+            }
+
+            logger.info(`Group theme restored for ${threadID}`);
+            api.sendMessage(
+              `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n🚫 𝗔𝗰𝘁𝗶𝗼𝗻 𝗗𝗲𝗻𝗶𝗲𝗱!\nOnly group admins can change the group theme.\n\n✅ Theme has been restored.\n\n━━━━━━━━━━━━━━━━━━━━`,
+              threadID
+            );
+          });
+        }
+      } else if (newTheme && normalizeTheme(newTheme) !== normalizeTheme(targetTheme)) {
+        await updateProtectionTargets(threadID, { theme: newTheme });
+      }
+    } catch (error) {
+      logger.error('Error in group theme protection:', error);
     }
   }
 
@@ -228,4 +390,96 @@ export const handleNicknameProtection = async (
       logger.error('Error in nickname protection:', error);
     }
   }
+};
+
+const restoreNameToTarget = async (
+  api: IFCAU_API,
+  threadID: string,
+  targetName: string,
+  notify: boolean
+): Promise<boolean> => {
+  if (!targetName) return false;
+
+  return await new Promise<boolean>((resolve) => {
+    api.setTitle(targetName, threadID, (err) => {
+      if (err) {
+        logger.error('Error restoring group name on startup scan:', err);
+        return resolve(false);
+      }
+
+      logger.info(`Group name enforced for ${threadID}`);
+
+      if (notify) {
+        api.sendMessage(
+          `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n✅ Group name has been restored to:\n${targetName}\n\n━━━━━━━━━━━━━━━━━━━━`,
+          threadID
+        );
+      }
+
+      resolve(true);
+    });
+  });
+};
+
+const restoreThemeToTarget = async (
+  api: IFCAU_API,
+  threadID: string,
+  targetTheme: string,
+  notify: boolean
+): Promise<boolean> => {
+  if (!targetTheme) return false;
+
+  const changeThreadColor = (api as any).changeThreadColor as
+    | ((color: string, id: string, cb: (err: any) => void) => void)
+    | undefined;
+
+  if (!changeThreadColor) {
+    logger.warn('API does not support changeThreadColor; skipping theme restore');
+    return false;
+  }
+
+  return await new Promise<boolean>((resolve) => {
+    changeThreadColor(targetTheme, threadID, (err: any) => {
+      if (err) {
+        logger.error('Error restoring group theme on startup scan:', err);
+        return resolve(false);
+      }
+
+      logger.info(`Group theme enforced for ${threadID}`);
+
+      if (notify) {
+        api.sendMessage(
+          `━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝗩𝗲𝘅𝗼𝗻𝗦𝗠𝗣 𝗦𝗲𝗰𝘂𝗿𝗶𝘁𝘆\n━━━━━━━━━━━━━━━━━━━━\n\n✅ Group theme has been restored.\n\n━━━━━━━━━━━━━━━━━━━━`,
+          threadID
+        );
+      }
+
+      resolve(true);
+    });
+  });
+};
+
+export const enforceProtectionSnapshot = async (
+  api: IFCAU_API,
+  threadID: string,
+  threadInfo?: any,
+  notify = false
+): Promise<{ nameRestored: boolean; themeRestored: boolean }> => {
+  const { name: targetName, theme: targetTheme } = await getProtectionTargets(threadID, threadInfo);
+
+  const currentName = threadInfo?.threadName || threadInfo?.name || '';
+  const currentTheme = extractThemeFromInfo(threadInfo);
+
+  let nameRestored = false;
+  let themeRestored = false;
+
+  if (targetName && currentName && currentName !== targetName) {
+    nameRestored = await restoreNameToTarget(api, threadID, targetName, notify);
+  }
+
+  if (targetTheme && currentTheme && normalizeTheme(currentTheme) !== normalizeTheme(targetTheme)) {
+    themeRestored = await restoreThemeToTarget(api, threadID, targetTheme, notify);
+  }
+
+  return { nameRestored, themeRestored };
 };
