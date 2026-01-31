@@ -148,11 +148,11 @@ const command: ICommand = {
             `cancel - Cancel action\n\n` +
             `You have 60 seconds to respond.`;
 
-        const actionMsg = await send(actionMessage);
+        api.sendMessage(actionMessage, event.threadID, (err, info) => {
+            if (err || !info) return;
 
-        if (actionMsg && actionMsg.messageID) {
-            client.handleReplies.set(actionMsg.messageID, {
-                messageID: actionMsg.messageID,
+            client.handleReplies.set(info.messageID, {
+                messageID: info.messageID,
                 name: "report",
                 author: event.senderID,
                 targetId: targetId,
@@ -162,9 +162,9 @@ const command: ICommand = {
 
             // Auto-delete after 60 seconds
             setTimeout(() => {
-                client.handleReplies.delete(actionMsg.messageID);
+                client.handleReplies.delete(info.messageID);
             }, 60000);
-        }
+        });
     },
 
     handleReply: async ({ api, event, send, handleReply }: IHandleParams) => {
