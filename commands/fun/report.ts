@@ -122,7 +122,7 @@ const command: ICommand = {
             `Account "${targetName}" has been SUCCESSFULLY REPORTED to Facebook and connected server networks.\n\n` +
             `REPORT DETAILS\n` +
             `Reason: ${randomReason}\n` +
-            `Report Time: ${new Date().toLocaleString()}\n` +
+            `Report Time: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }'en-PH', { timeZone: 'Asia/Manila' })}\n` +
             `Severity: CRITICAL\n\n` +
             `COLLECTED INFORMATION\n` +
             collectedInfo.join('\n') + '\n\n' +
