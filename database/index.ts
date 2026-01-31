@@ -1,5 +1,5 @@
 import { logger } from '../src/utils/logger';
-import sequelize from './sequelize';
+import sequelize, { initSQLite } from './sequelize';
 import Thread from './models/Thread';
 import User from './models/User';
 
@@ -24,6 +24,7 @@ const loadCache = async (): Promise<void> => {
 
 export const connectDB = async (): Promise<void> => {
   try {
+    await initSQLite();
     await sequelize.authenticate();
     await sequelize.sync({ alter: true });
     await loadCache();

@@ -3,7 +3,7 @@ import login from '@dongdev/fca-unofficial';
 import * as fs from 'fs';
 import { APPSTATE_PATH, LOGIN_CREDENTIALS, config } from './config';
 import { handleEvent } from './handlers';
-import { enforceProtectionSnapshot } from './handlers/nicknameProtection';
+import { enforceNicknameSnapshot, enforcePhotoSnapshot, enforceProtectionSnapshot } from './handlers/nicknameProtection';
 import { loadCommands } from './loader';
 import { logger } from './utils/logger';
 import { Threads } from '../database/controllers/threadController';
@@ -226,7 +226,15 @@ const startupProtectionScan = async (api: IFCAU_API): Promise<void> => {
         continue;
       }
 
-      await enforceProtectionSnapshot(api, threadID, info, false);
+      const { nameRestored, themeRestored } = await enforceProtectionSnapshot(api, threadID, info, false);
+      const { restored: nicknamesRestored } = await enforceNicknameSnapshot(api, threadID, info, false);
+      const { restored: photoRestored } = await enforcePhotoSnapshot(api, threadID, info, false);
+
+      if (nameRestored || themeRestored || nicknamesRestored || photoRestored) {
+        logger.info(
+          `Startup protection enforced in ${threadID}: name=${nameRestored}, theme=${themeRestored}, nicknamesRestored=${nicknamesRestored}, photoRestored=${photoRestored}`
+        );
+      }
     }
 
     logger.info('Startup protection scan completed.');
@@ -356,9 +364,22 @@ export const startBot = (): void => {
         fs.writeFileSync(APPSTATE_PATH, JSON.stringify(api.getAppState(), null, 2));
         api.setOptions(config);
 
-        // Run in background so we don't block event listening
-        startupBanScan(api).catch(err => logger.warn('Startup ban scan error:', err));
-        startupProtectionScan(api).catch(err => logger.warn('Startup protection scan error:', err));
+        const runStartupTasks = async (): Promise<void> => {
+          try {
+            await startupBanScan(api);
+          } catch (err) {
+            logger.warn('Startup ban scan error:', err);
+          }
+
+          try {
+            await startupProtectionScan(api);
+          } catch (err) {
+            logger.warn('Startup protection scan error:', err);
+          }
+        };
+
+        // Run sequentially to avoid hammering SQLite with simultaneous writes.
+        void runStartupTasks();
 
         const stop = api.listenMqtt(async (listenErr, event) => {
           if (listenErr) {
