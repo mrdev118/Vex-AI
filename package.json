@@ -22,7 +22,7 @@
   "author": "DongDev",
   "license": "MIT",
   "dependencies": {
-    "@dongdev/fca-unofficial": "^3.0.23",
+    "@dongdev/fca-unofficial": "^3.0.25",
     "@google/genai": "^0.3.0",
     "axios": "^1.7.7",
     "express": "^5.2.1",
