@@ -49,13 +49,13 @@ export const createMessageHelper = (
     react: async (emoji: string, targetMessageID?: string): Promise<void> => {
       const targetID = targetMessageID || messageID;
       return new Promise((resolve, reject) => {
-        api.setMessageReaction(emoji, targetID, (err) => {
+        api.setMessageReaction(emoji, targetID, threadID, (err?: Error) => {
           if (err) {
             reject(err);
           } else {
             resolve();
           }
-        });
+        }, true);
       });
     }
   };
